@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { NegotiationCard } from "@/components/NegotiationCard";
+import { VendorCard } from "@/components/VendorCard";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
 import { Button } from "@/components/ui/button";
@@ -213,58 +214,7 @@ export function Index() {
     }
   };
 
-  const handleVendorClick = (vendor: Vendor) => {
-    setSelectedVendor(vendor);
-    setEditedBehaviour(vendor.behaviour || "");
-    setIsEditModalOpen(true);
-  };
 
-  const handleSaveBehaviour = async () => {
-    if (!selectedVendor) return;
-
-    setIsSaving(true);
-    try {
-      const response = await fetch(`http://localhost:3001/api/vendors/${selectedVendor.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ behaviour: editedBehaviour }),
-      });
-
-      if (response.ok) {
-        // Update the vendor in the local state
-        setVendors((prev) =>
-          prev.map((v) =>
-            v.id === selectedVendor.id ? { ...v, behaviour: editedBehaviour } : v
-          )
-        );
-        toast({
-          title: "Vendor updated",
-          description: `Behavior for ${selectedVendor.name} has been updated.`,
-          variant: "success",
-        });
-        setIsEditModalOpen(false);
-      } else {
-        throw new Error("Failed to update vendor");
-      }
-    } catch (error) {
-      console.error("Error updating vendor:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update vendor behavior.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const activeNegotiations = negotiations.filter(
-    (n) => n.status === "IN_PROGRESS" || n.status === "REVIEW_REQUIRED"
-  );
-  const completedNegotiations = negotiations.filter(
-    (n) => n.status === "COMPLETED"
-  );
-  
   return (
     <div 
       className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
@@ -343,156 +293,93 @@ export function Index() {
             </Button>
           </div>
 
-          {/* Dark gray tile container for negotiations */}
+          {/* Dark gray tile container for negotiations and vendors */}
           <div className="bg-gray-900/80 rounded-t-2xl mt-64 p-6 md:p-8">
-            <Tabs defaultValue="active" className="space-y-6">
-              <div className="flex justify-start">
-                <TabsList className="bg-gray-800">
-                  <TabsTrigger 
-                    value="active" 
-                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
-                  >
-                    Active ({activeNegotiations.length})
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="completed" 
-                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
-                  >
-                    Completed ({completedNegotiations.length})
-                  </TabsTrigger>
-                </TabsList>
+            <div className="space-y-12">
+              {/* Negotiations Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-white">Negotiations</h2>
+                  {negotiations.length > 3 && (
+                    <Button
+                      onClick={() => navigate("/all-negotiations")}
+                      variant="outline"
+                      size="sm"
+                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+                    >
+                      Browse All ({negotiations.length})
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
+                </div>
+                {isLoading ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      Loading negotiations...
+                    </p>
+                  </div>
+                ) : negotiations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      No negotiations yet
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Start a new negotiation to see it here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                    {negotiations.slice(0, 3).map((negotiation) => (
+                      <NegotiationCard
+                        key={negotiation.id}
+                        negotiation={negotiation}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
-            <TabsContent value="active" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    Loading negotiations...
-                  </p>
+              {/* Vendors Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-white">Vendors</h2>
+                  {vendors.length > 3 && (
+                    <Button
+                      onClick={() => navigate("/all-vendors")}
+                      variant="outline"
+                      size="sm"
+                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+                    >
+                      Browse All ({vendors.length})
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
                 </div>
-              ) : activeNegotiations.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    No active negotiations
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Start a new negotiation to see it here
-                  </p>
-                </div>
-              ) : (
-                <>
+                {isLoadingVendors ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      Loading vendors...
+                    </p>
+                  </div>
+                ) : vendors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      No vendors available
+                    </p>
+                  </div>
+                ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {activeNegotiations.slice(0, 3).map((negotiation) => (
-                      <NegotiationCard
-                        key={negotiation.id}
-                        negotiation={negotiation}
+                    {vendors.slice(0, 3).map((vendor) => (
+                      <VendorCard
+                        key={vendor.id}
+                        vendor={vendor}
+                        onClick={() => handleVendorClick(vendor)}
                       />
                     ))}
                   </div>
-                  {activeNegotiations.length > 3 && (
-                    <div className="flex justify-center mt-6">
-                      <Button
-                        onClick={() => navigate("/all-negotiations")}
-                        variant="outline"
-                        className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
-                      >
-                        Browse All ({activeNegotiations.length})
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </TabsContent>
-
-            <TabsContent value="completed" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    Loading negotiations...
-                  </p>
-                </div>
-              ) : completedNegotiations.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    No completed negotiations yet
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Completed negotiations will appear here
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {completedNegotiations.slice(0, 3).map((negotiation) => (
-                      <NegotiationCard
-                        key={negotiation.id}
-                        negotiation={negotiation}
-                      />
-                    ))}
-                  </div>
-                  {completedNegotiations.length > 3 && (
-                    <div className="flex justify-center mt-6">
-                      <Button
-                        onClick={() => navigate("/all-negotiations")}
-                        variant="outline"
-                        className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
-                      >
-                        Browse All ({completedNegotiations.length})
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Vendors Section */}
-          <div className="bg-gray-900 rounded-2xl mt-8 p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <SpatzIcon size={24} />
-              <h2 className="text-2xl font-bold text-white">Available Vendors</h2>
+                )}
+              </div>
             </div>
-            {isLoadingVendors ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  Loading vendors...
-                </p>
-              </div>
-            ) : vendors.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  No vendors available
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {vendors.map((vendor) => (
-                  <div
-                    key={vendor.id}
-                    onClick={() => handleVendorClick(vendor)}
-                    className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/50 hover:bg-gray-800/70 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: vendor.color }}
-                      />
-                      <h3 className="text-lg font-semibold text-white">
-                        {vendor.name}
-                      </h3>
-                    </div>
-                    {vendor.behaviour && (
-                      <p className="text-sm text-white/70 line-clamp-2">
-                        {vendor.behaviour}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </main>
@@ -501,11 +388,7 @@ export function Index() {
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: selectedVendor?.color }}
-              />
+            <DialogTitle className="text-white">
               Edit Behavior: {selectedVendor?.name}
             </DialogTitle>
           </DialogHeader>
