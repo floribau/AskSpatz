@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { NegotiationCard } from "@/components/NegotiationCard";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
@@ -33,6 +32,8 @@ export function Index() {
           throw new Error("Failed to fetch negotiations");
         }
         const data = await response.json();
+        console.log("[Index] Fetched negotiations:", data);
+        console.log("[Index] Sample negotiation:", data[0]);
         setNegotiations(data);
       } catch (error) {
         console.error("Error fetching negotiations:", error);
@@ -124,12 +125,6 @@ export function Index() {
     }
   };
 
-  const activeNegotiations = negotiations.filter(
-    (n) => n.status === "IN_PROGRESS" || n.status === "REVIEW_REQUIRED"
-  );
-  const completedNegotiations = negotiations.filter(
-    (n) => n.status === "COMPLETED"
-  );
 
   return (
     <div 
@@ -210,81 +205,32 @@ export function Index() {
           </div>
 
           {/* Dark gray tile container for negotiations */}
-          <div className="bg-gray-900 rounded-t-2xl mt-64 p-6 md:p-8">
-            <Tabs defaultValue="active" className="space-y-6">
-              <div className="flex justify-start">
-                <TabsList className="bg-gray-800">
-                  <TabsTrigger 
-                    value="active" 
-                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
-                  >
-                    Active ({activeNegotiations.length})
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="completed" 
-                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
-                  >
-                    Completed ({completedNegotiations.length})
-                  </TabsTrigger>
-                </TabsList>
+          <div className="bg-gray-900/80 rounded-t-2xl mt-64 p-6 md:p-8">
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-lg text-muted-foreground">
+                  Loading negotiations...
+                </p>
               </div>
-
-            <TabsContent value="active" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    Loading negotiations...
-                  </p>
-                </div>
-              ) : activeNegotiations.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    No active negotiations
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Start a new negotiation to see it here
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                  {activeNegotiations.map((negotiation) => (
-                    <NegotiationCard
-                      key={negotiation.id}
-                      negotiation={negotiation}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="completed" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    Loading negotiations...
-                  </p>
-                </div>
-              ) : completedNegotiations.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">
-                    No completed negotiations yet
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Completed negotiations will appear here
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                  {completedNegotiations.map((negotiation) => (
-                    <NegotiationCard
-                      key={negotiation.id}
-                      negotiation={negotiation}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-            </Tabs>
+            ) : negotiations.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-lg text-muted-foreground">
+                  No negotiations yet
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Start a new negotiation to see it here
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                {negotiations.map((negotiation) => (
+                  <NegotiationCard
+                    key={negotiation.id}
+                    negotiation={negotiation}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>

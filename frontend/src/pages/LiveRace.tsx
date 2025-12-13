@@ -166,7 +166,7 @@ export function LiveRace() {
         {/* Top bar with back button and centered logo */}
         <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
           {/* Back button - top left */}
-          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/80">
             <Link to="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -205,7 +205,7 @@ export function LiveRace() {
         {/* Top bar with back button and centered logo */}
         <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
           {/* Back button - top left */}
-          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/80">
             <Link to="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -410,7 +410,7 @@ export function LiveRace() {
                   {offers.map((offer) => (
                     <div
                       key={offer.id}
-                      className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/50"
+                      className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/80"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">

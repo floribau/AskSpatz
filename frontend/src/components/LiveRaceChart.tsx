@@ -140,7 +140,7 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
                     ? "ring-2 ring-blue-500 bg-blue-500/20"
                     : isWinner
                     ? "bg-gray-700/50 ring-2 ring-gray-500 hover:bg-gray-700/70"
-                    : "bg-gray-800/50 hover:bg-gray-800/70"
+                    : "bg-gray-800/80 hover:bg-gray-800/80"
                 }`}
               >
                 <div

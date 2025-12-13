@@ -28,7 +28,7 @@ export function CommunicationLog({ messages }: CommunicationLogProps) {
                   message.sender === "agent" &&
                     "bg-blue-500/20 border border-blue-500/30",
                   message.sender === "vendor" &&
-                    "bg-gray-800/50 border border-gray-700/50",
+                    "bg-gray-800/80 border border-gray-700/50",
                   message.sender === "human" &&
                     "bg-purple-500/20 border border-purple-500/30 ml-8"
                 )}
