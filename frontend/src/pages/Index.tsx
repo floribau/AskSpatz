@@ -5,18 +5,43 @@ import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { ArrowRight } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Vendor {
+  id: string;
+  name: string;
+  company: string;
+  color: string;
+  category: string;
+  behaviour?: string | null;
+}
 
 export function Index() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [typingText, setTypingText] = useState("");
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editedBehaviour, setEditedBehaviour] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const userName = "Spatz"; // TODO: Replace with actual logged-in user name
   
   const examples = [
@@ -41,6 +66,24 @@ export function Index() {
       }
     }
     fetchNegotiations();
+  }, []);
+
+  useEffect(() => {
+    async function fetchVendors() {
+      try {
+        const response = await fetch("http://localhost:3001/api/vendors");
+        if (!response.ok) {
+          throw new Error("Failed to fetch vendors");
+        }
+        const data = await response.json();
+        setVendors(data);
+      } catch (error) {
+        console.error("Error fetching vendors:", error);
+      } finally {
+        setIsLoadingVendors(false);
+      }
+    }
+    fetchVendors();
   }, []);
 
   // Auto-resize textarea
@@ -96,7 +139,7 @@ export function Index() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             vendorIds: ["56", "57", "58"],
-            negotiationName: "Natural Language Negotiation",
+            negotiationName: "Negotiation",
             productName: inputValue.trim().substring(0, 50),
             userRequest: inputValue.trim(),
           }),
@@ -121,6 +164,51 @@ export function Index() {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSubmit();
+    }
+  };
+
+  const handleVendorClick = (vendor: Vendor) => {
+    setSelectedVendor(vendor);
+    setEditedBehaviour(vendor.behaviour || "");
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveBehaviour = async () => {
+    if (!selectedVendor) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/vendors/${selectedVendor.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ behaviour: editedBehaviour }),
+      });
+
+      if (response.ok) {
+        // Update the vendor in the local state
+        setVendors((prev) =>
+          prev.map((v) =>
+            v.id === selectedVendor.id ? { ...v, behaviour: editedBehaviour } : v
+          )
+        );
+        toast({
+          title: "Vendor updated",
+          description: `Behavior for ${selectedVendor.name} has been updated.`,
+          variant: "success",
+        });
+        setIsEditModalOpen(false);
+      } else {
+        throw new Error("Failed to update vendor");
+      }
+    } catch (error) {
+      console.error("Error updating vendor:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update vendor behavior.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -246,14 +334,28 @@ export function Index() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                  {activeNegotiations.map((negotiation) => (
-                    <NegotiationCard
-                      key={negotiation.id}
-                      negotiation={negotiation}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                    {activeNegotiations.slice(0, 3).map((negotiation) => (
+                      <NegotiationCard
+                        key={negotiation.id}
+                        negotiation={negotiation}
+                      />
+                    ))}
+                  </div>
+                  {activeNegotiations.length > 3 && (
+                    <div className="flex justify-center mt-6">
+                      <Button
+                        onClick={() => navigate("/all-negotiations")}
+                        variant="outline"
+                        className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+                      >
+                        Browse All ({activeNegotiations.length})
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
 
@@ -274,20 +376,122 @@ export function Index() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                  {completedNegotiations.map((negotiation) => (
-                    <NegotiationCard
-                      key={negotiation.id}
-                      negotiation={negotiation}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                    {completedNegotiations.slice(0, 3).map((negotiation) => (
+                      <NegotiationCard
+                        key={negotiation.id}
+                        negotiation={negotiation}
+                      />
+                    ))}
+                  </div>
+                  {completedNegotiations.length > 3 && (
+                    <div className="flex justify-center mt-6">
+                      <Button
+                        onClick={() => navigate("/all-negotiations")}
+                        variant="outline"
+                        className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+                      >
+                        Browse All ({completedNegotiations.length})
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
             </Tabs>
           </div>
+
+          {/* Vendors Section */}
+          <div className="bg-gray-900 rounded-2xl mt-8 p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <SpatzIcon size={24} />
+              <h2 className="text-2xl font-bold text-white">Available Vendors</h2>
+            </div>
+            {isLoadingVendors ? (
+              <div className="text-center py-12">
+                <p className="text-lg text-muted-foreground">
+                  Loading vendors...
+                </p>
+              </div>
+            ) : vendors.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-lg text-muted-foreground">
+                  No vendors available
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {vendors.map((vendor) => (
+                  <div
+                    key={vendor.id}
+                    onClick={() => handleVendorClick(vendor)}
+                    className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/50 hover:bg-gray-800/70 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: vendor.color }}
+                      />
+                      <h3 className="text-lg font-semibold text-white">
+                        {vendor.name}
+                      </h3>
+                    </div>
+                    {vendor.behaviour && (
+                      <p className="text-sm text-white/70 line-clamp-2">
+                        {vendor.behaviour}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </main>
+
+      {/* Edit Vendor Behavior Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded-full"
+                style={{ backgroundColor: selectedVendor?.color }}
+              />
+              Edit Behavior: {selectedVendor?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium text-white/70 mb-2 block">
+              Behavior Description
+            </label>
+            <Textarea
+              value={editedBehaviour}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditedBehaviour(e.target.value)}
+              placeholder="Enter vendor behavior description..."
+              className="min-h-[200px] bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveBehaviour}
+              disabled={isSaving}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
