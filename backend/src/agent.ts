@@ -97,9 +97,9 @@ class Agent {
       },
       {
         name: "write_email",
-        description: "Write and send an email.",
+        description: "Write and send an email to the vendor. Before writing, you will receive competitive leverage information if a better offer exists from other vendors in the same negotiation group. Use this leverage strategically (mentioning only price and conditions, never vendor names) to negotiate better terms.",
         schema: z.object({
-          body: z.string().describe("The body of the Email to send."),
+          body: z.string().describe("The body of the Email to send. If competitive leverage is available, consider incorporating it naturally into your negotiation strategy."),
         }),
       },
     );
@@ -279,6 +279,80 @@ class Agent {
     });
   }
 
+  /**
+   * Get the best offer from other negotiations in the same group
+   */
+  private async getCompetitiveLeverage(): Promise<{ price: number; description: string } | null> {
+    if (!this.negotiation_group_id || !this.negotiation_id) {
+      return null;
+    }
+
+    try {
+      // Get all negotiations in the same group, excluding current one
+      const { data: negotiations, error: negotiationsError } = await supabase
+        .from("negotiation")
+        .select("id")
+        .eq("negotiation_group_id", this.negotiation_group_id)
+        .neq("id", this.negotiation_id);
+
+      if (negotiationsError || !negotiations || negotiations.length === 0) {
+        return null;
+      }
+
+      const otherNegotiationIds = negotiations.map((n) => n.id);
+
+      // Get the best (lowest price) negotiation_state from other negotiations
+      const { data: states, error: statesError } = await supabase
+        .from("negotiation_state")
+        .select("price, description")
+        .in("negotiation_id", otherNegotiationIds)
+        .order("price", { ascending: true })
+        .limit(1);
+
+      if (statesError || !states || states.length === 0) {
+        return null;
+      }
+
+      return {
+        price: states[0].price,
+        description: states[0].description || "",
+      };
+    } catch (err) {
+      console.error("[getCompetitiveLeverage] Error:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Get the current negotiation's best offer (lowest price)
+   */
+  private async getCurrentBestOffer(): Promise<{ price: number; description: string } | null> {
+    if (!this.negotiation_id) {
+      return null;
+    }
+
+    try {
+      const { data: states, error: statesError } = await supabase
+        .from("negotiation_state")
+        .select("price, description")
+        .eq("negotiation_id", this.negotiation_id)
+        .order("price", { ascending: true })
+        .limit(1);
+
+      if (statesError || !states || states.length === 0) {
+        return null;
+      }
+
+      return {
+        price: states[0].price,
+        description: states[0].description || "",
+      };
+    } catch (err) {
+      console.error("[getCurrentBestOffer] Error:", err);
+      return null;
+    }
+  }
+
   private buildSystemPrompt(): string {
     let contextSection = "\n\n## Current Negotiation Context\n";
     
@@ -324,9 +398,19 @@ class Agent {
       throw new Error("Agent not initialized. Call initialize() first.");
     }
 
+    // Get competitive leverage and include it in the context if available
+    const competitiveOffer = await this.getCompetitiveLeverage();
+    const currentBestOffer = await this.getCurrentBestOffer();
+    
+    let leverageContext = "";
+    if (competitiveOffer && currentBestOffer && competitiveOffer.price < currentBestOffer.price) {
+      leverageContext = `\n\n[COMPETITIVE LEVERAGE] Before writing your next email, note that you have received a better offer from another vendor in this negotiation group: Price $${competitiveOffer.price.toLocaleString()}, Conditions: ${competitiveOffer.description}. You can use this as leverage (anonymously - mention only the price and conditions, never the vendor name) to negotiate a better deal. Consider incorporating this into your negotiation strategy when writing emails.`;
+      console.log(`[Agent] Competitive leverage available: $${competitiveOffer.price} vs current best: $${currentBestOffer.price}`);
+    }
+
     const response = await this.agent.invoke(
       {
-        messages: [{ role: "user", content: message }],
+        messages: [{ role: "user", content: message + leverageContext }],
       },
       {
         recursionLimit: 100,
