@@ -218,7 +218,19 @@ export function LiveRace() {
               {negotiation.productName}
             </p>
           </div>
-          <StatusBadge status={negotiation.status} />
+          <div className="flex items-center gap-3">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="text-2xl"
+            >
+              <Link to={`/negotiation/${id}/betting`}>
+                🤫
+              </Link>
+            </Button>
+            <StatusBadge status={negotiation.status} />
+          </div>
         </div>
 
         {/* Current Best Price Banner */}
