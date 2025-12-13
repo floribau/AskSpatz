@@ -228,6 +228,114 @@ app.get("/api/negotiation-groups", async (req, res) => {
   }
 });
 
+// Get a specific negotiation group with details
+app.get("/api/negotiation-groups/:id", async (req, res) => {
+  const groupId = req.params.id;
+
+  try {
+    // Fetch the negotiation group
+    const { data: group, error: groupError } = await supabase
+      .from("negotiation_group")
+      .select("*")
+      .eq("id", groupId)
+      .single();
+
+    if (groupError || !group) {
+      console.log(`[API] Negotiation group ${groupId} not found`);
+      return res.status(404).json({ error: "Negotiation group not found" });
+    }
+
+    // Fetch negotiations linked to this group
+    const { data: negotiations, error: negError } = await supabase
+      .from("negotiation")
+      .select("id, vendor_id, conversation_id")
+      .eq("negotiation_group_id", groupId);
+
+    if (negError) {
+      console.error("[API] Error fetching negotiations:", negError.message);
+    }
+
+    // Get unique conversation IDs
+    const conversationIds = negotiations?.map((n) => n.conversation_id).filter(Boolean) || [];
+
+    // Fetch all messages for these conversations
+    const { data: messages, error: msgError } = await supabase
+      .from("message")
+      .select("*")
+      .in("conversation_id", conversationIds.length > 0 ? conversationIds : [-1])
+      .order("created_at", { ascending: true });
+
+    if (msgError) {
+      console.error("[API] Error fetching messages:", msgError.message);
+    }
+
+    // Get vendor IDs and fetch vendor details
+    const vendorIds = negotiations?.map((n) => n.vendor_id).filter(Boolean) || [];
+    const { data: vendors, error: vendorError } = await supabase
+      .from("vendors")
+      .select("*")
+      .in("id", vendorIds.length > 0 ? vendorIds : [-1]);
+
+    if (vendorError) {
+      console.error("[API] Error fetching vendors:", vendorError.message);
+    }
+
+    // Generate colors for vendors
+    const colors = [
+      "hsl(207, 90%, 61%)",
+      "hsl(142, 71%, 45%)",
+      "hsl(262, 83%, 58%)",
+      "hsl(25, 95%, 53%)",
+      "hsl(330, 81%, 60%)",
+      "hsl(235, 76%, 60%)",
+      "hsl(0, 84%, 60%)",
+      "hsl(48, 96%, 53%)",
+    ];
+
+    // Format vendors for frontend
+    const formattedVendors = (vendors || []).map((vendor, index) => ({
+      id: vendor.id.toString(),
+      name: vendor.name,
+      company: vendor.name,
+      color: colors[index % colors.length],
+      category: "Vendor",
+    }));
+
+    // Format messages for frontend
+    const formattedMessages = (messages || []).map((msg) => ({
+      sender: msg.type === "assistant" ? "agent" : "vendor",
+      name: msg.type === "assistant" ? "AskSpatz Agent" : "Vendor",
+      content: msg.message || "",
+      timestamp: msg.created_at,
+    }));
+
+    // Build the response
+    const response = {
+      id: group.id.toString(),
+      title: group.name,
+      productName: "", // Can be populated from products table
+      status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
+      vendors_engaged: negotiations?.length || 0,
+      vendors: formattedVendors,
+      negotiations: negotiations || [],
+      messages: formattedMessages,
+      // Placeholder values - can be calculated from offers later
+      startingPrice: 25000,
+      targetReduction: 25,
+      targetPrice: 18750,
+      priceHistory: [],
+      suggestions: [],
+      agentRationale: "Negotiation in progress with selected vendors.",
+      riskScore: 5,
+    };
+
+    res.json(response);
+  } catch (err) {
+    console.error("[API] Error fetching negotiation group details:", err);
+    res.status(500).json({ error: "Failed to fetch negotiation group details" });
+  }
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });

@@ -8,29 +8,101 @@ import { LiveRaceChart } from "@/components/LiveRaceChart";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { SuggestionCard } from "@/components/SuggestionCard";
 import { VendorLeaderboard } from "@/components/VendorLeaderboard";
-import { AgentPerformance } from "@/components/AgentPerformance";
 import { InterventionModal } from "@/components/InterventionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { negotiationDetails } from "@/data/negotiations";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { AgentStatus, NegotiationDetail, Message } from "@/data/types";
+import { NegotiationDetail, Message } from "@/data/types";
 
 export function LiveRace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showIntervention, setShowIntervention] = useState(false);
-  const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(
-    null
-  );
+  const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (id && negotiationDetails[id]) {
-      setNegotiation({ ...negotiationDetails[id] });
+    if (!id) return;
+
+    let intervalId: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
+    async function fetchNegotiationGroup() {
+      try {
+        const response = await fetch(`http://localhost:3001/api/negotiation-groups/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch negotiation group");
+        }
+        const data = await response.json();
+        
+        // Map to NegotiationDetail format with safe defaults
+        const negotiationDetail: NegotiationDetail = {
+          id: data.id || id,
+          title: data.title || "Negotiation",
+          productName: data.productName || "",
+          best_nap: data.startingPrice || 0,
+          savings_percent: 0,
+          status: data.status === "running" ? "IN_PROGRESS" : data.status || "IN_PROGRESS",
+          vendors_engaged: data.vendors_engaged || 0,
+          created_at: new Date().toISOString(),
+          startingPrice: data.startingPrice || 0,
+          targetReduction: data.targetReduction || 0,
+          targetPrice: data.targetPrice || 0,
+          vendors: data.vendors || [],
+          priceHistory: data.priceHistory && data.priceHistory.length > 0 ? data.priceHistory : [{ round: 1 }],
+          suggestions: data.suggestions || [],
+          messages: data.messages || [],
+          agentRationale: data.agentRationale || "Negotiation in progress...",
+          riskScore: data.riskScore || 5,
+          startTime: new Date().toISOString(),
+        };
+        
+        if (isMounted) {
+          setNegotiation(negotiationDetail);
+          setIsLoading(false);
+
+          // Stop polling if negotiation is finished
+          if (data.status === "finished" || data.status === "COMPLETED") {
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching negotiation group:", error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     }
+    
+    // Initial fetch
+    fetchNegotiationGroup();
+    
+    // Poll every 2 seconds to get updates (messages, status changes)
+    intervalId = setInterval(fetchNegotiationGroup, 2000);
+
+    return () => {
+      isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header onNewNegotiation={() => navigate("/new")} />
+        <main className="container px-4 md:px-6 py-8 text-center">
+          <p className="text-lg text-muted-foreground">Loading negotiation...</p>
+        </main>
+      </div>
+    );
+  }
 
   if (!negotiation) {
     return (
@@ -46,41 +118,9 @@ export function LiveRace() {
     );
   }
 
-  // Calculate agent statuses
+  // Get latest price round for calculations
   const latestRound =
     negotiation.priceHistory[negotiation.priceHistory.length - 1];
-  const agentStatuses: AgentStatus[] = negotiation.vendors.map((vendor) => {
-    const currentPrice =
-      (latestRound?.[vendor.id] as number) || negotiation.startingPrice;
-    const reduction = negotiation.startingPrice - currentPrice;
-    const reductionPercent = (reduction / negotiation.startingPrice) * 100;
-    const attempts = Math.floor(Math.random() * 15) + 5;
-
-    let status: AgentStatus["status"] = "Strong";
-    let interventionLevel: AgentStatus["interventionLevel"] = "green";
-    let interventionText = "Performing well";
-
-    if (reductionPercent < 5) {
-      status = "Struggling";
-      interventionLevel = "red";
-      interventionText = "Needs assistance";
-    } else if (reductionPercent < 15) {
-      status = "Moderate";
-      interventionLevel = "yellow";
-      interventionText = "Could improve";
-    }
-
-    return {
-      vendorId: vendor.id,
-      vendorName: vendor.company,
-      currentPrice,
-      attempts,
-      reductionPercent,
-      status,
-      interventionLevel,
-      interventionText,
-    };
-  });
 
   const handleSendMessage = (message: string) => {
     const newMessage: Message = {
@@ -237,9 +277,6 @@ export function LiveRace() {
             />
           </div>
         </div>
-
-        {/* Agent Performance */}
-        <AgentPerformance agents={agentStatuses} />
 
         {/* Human Intervention Section (for REVIEW_REQUIRED) */}
         {negotiation.status === "REVIEW_REQUIRED" && (
