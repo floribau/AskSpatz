@@ -76,7 +76,7 @@ class Agent {
     return [writeEmail, finishNegotiation];
   }
 
-  async initialize(): Promise<void> {
+  async initialize(vendorId: string = "8"): Promise<void> {
     // Create a new conversation
     const conversationCreateResponse = await fetch(
       "https://negbot-backend-ajdxh9axb0ddb0e9.westeurope-01.azurewebsites.net/api/conversations/?team_id=220239",
@@ -84,7 +84,7 @@ class Agent {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vendor_id: 8,
+          vendor_id: parseInt(vendorId) || 8,
           title: "Price Negotiation - Q4 Order"
         })
       }
@@ -120,32 +120,4 @@ class Agent {
   }
 }
 
-async function run_agent(): Promise<void> {
-  const agent = new Agent();
-  await agent.initialize();
-  let i = 0;
-  let user_message = "";
-
-  while (true) {
-    if (i === 0) {
-      user_message = "kickoff negotiations for buying a coffee machine: Maverick Gravimetric 3gr";
-    } else {
-      user_message = "continue negotiating";
-    }
-    console.log(`[run_agent] user_message: ${user_message}`);
-    const response = await agent.invoke(user_message);
-    const hasFinishNegotiation = response.messages?.some(
-      (msg: any) => msg.name === "finish_negotiation"
-    );
-    
-    if (hasFinishNegotiation) {
-      console.log("[run_agent] Negotiation finished!");
-      break;
-    }
-    
-    i++;
-  }
-}
-
 export { Agent };
-export default run_agent;
