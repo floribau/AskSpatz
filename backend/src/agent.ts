@@ -186,6 +186,16 @@ class Agent {
           }
         }
 
+        // After saving offers, trigger learning from the negotiation
+        if (this.vendor_id && this.conversation_id) {
+          try {
+            await this.learnFromNegotiationInternal();
+          } catch (learnError) {
+            console.error("[finishNegotiation] Error during learning:", learnError);
+            // Don't fail the negotiation if learning fails
+          }
+        }
+
         return JSON.stringify(offers);
       },
       {
@@ -197,6 +207,23 @@ class Agent {
             price: z.number().describe("The price of the offer."),
           })).describe("The offers the vendor has made."),
         }),
+      },
+    );
+    const learnFromNegotiation = tool(
+      async (): Promise<string> => {
+        try {
+          await this.learnFromNegotiationInternal();
+          return `Successfully learned from negotiation and updated vendor behavior description.`;
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.error(`[learnFromNegotiation] Error:`, errorMessage);
+          return `Error learning from negotiation: ${errorMessage}`;
+        }
+      },
+      {
+        name: "learn_from_negotiation",
+        description: "Automatically called after finishing a negotiation. Analyzes the negotiation conversation to refine and update the vendor's behavior description in the database. This helps improve future negotiations with this vendor.",
+        schema: z.object({}),
       },
     );
     const updateState = tool(
@@ -239,7 +266,102 @@ class Agent {
         }),
       },
     );
-    return [writeEmail, finishNegotiation, updateState];
+    return [writeEmail, finishNegotiation, updateState, learnFromNegotiation];
+  }
+
+  /**
+   * Learn from the negotiation and update vendor behavior description
+   */
+  private async learnFromNegotiationInternal(): Promise<void> {
+    console.log(`[learnFromNegotiation] Starting learning process for vendor ${this.vendor_id}`);
+    
+    if (!this.vendor_id || !this.conversation_id) {
+      throw new Error("Missing vendor_id or conversation_id; cannot learn from negotiation.");
+    }
+
+    // Fetch all messages from this conversation
+    const { data: messages, error: messagesError } = await supabase
+      .from("message")
+      .select("*")
+      .eq("conversation_id", this.conversation_id)
+      .order("created_at", { ascending: true });
+
+    if (messagesError) {
+      throw new Error(`Failed to fetch messages: ${messagesError.message}`);
+    }
+
+    if (!messages || messages.length === 0) {
+      console.log("[learnFromNegotiation] No messages found in this negotiation to learn from.");
+      return;
+    }
+
+    // Get current vendor behavior
+    const { data: vendorData, error: vendorError } = await supabase
+      .from("vendors")
+      .select("behaviour")
+      .eq("id", this.vendor_id)
+      .single();
+
+    if (vendorError) {
+      throw new Error(`Failed to fetch vendor data: ${vendorError.message}`);
+    }
+
+    const currentBehaviour = vendorData?.behaviour || "No previous behavior description.";
+
+    // Build conversation summary for analysis
+    const conversationSummary = messages
+      .map((msg, idx) => {
+        const role = msg.type === "assistant" ? "Agent" : "Vendor";
+        return `${role} (${idx + 1}): ${msg.message || ""}`;
+      })
+      .join("\n\n");
+
+    // Use the agent's LLM to analyze and refine the behavior description
+    const analysisPrompt = `You are analyzing a negotiation conversation to refine a vendor's behavior description.
+
+Current behavior description:
+${currentBehaviour}
+
+Full negotiation conversation:
+${conversationSummary}
+
+Based on this negotiation, analyze the vendor's:
+1. Communication style and tone
+2. Negotiation tactics and approach
+3. Response patterns and timing
+4. Flexibility and willingness to compromise
+5. Key personality traits revealed during negotiation
+
+Generate an UPDATED and REFINED behavior description that:
+- Incorporates insights from this negotiation
+- Maintains useful information from the original description
+- Is more accurate and detailed based on actual observed behavior
+- Is written in a clear, actionable format for future negotiations
+
+Return ONLY the refined behavior description, without any additional commentary or explanation.
+<Refined behaviour description>:`;
+
+    // Use initChatModel to get a chat model for analysis
+    const analysisModel = await initChatModel("claude-haiku-4-5-20251001");
+
+    const analysisResponse = await analysisModel.invoke([
+      new SystemMessage("You are an expert at analyzing negotiation behavior and creating detailed behavioral profiles."),
+      new HumanMessage(analysisPrompt),
+    ]);
+
+    const refinedBehaviour = analysisResponse.content?.toString() || currentBehaviour;
+
+    // Update the vendor's behavior in the database
+    const { error: updateError } = await supabase
+      .from("vendors")
+      .update({ behaviour: refinedBehaviour })
+      .eq("id", this.vendor_id);
+
+    if (updateError) {
+      throw new Error(`Failed to update vendor behavior: ${updateError.message}`);
+    }
+
+    console.log(`[learnFromNegotiation] Successfully updated vendor ${this.vendor_id} behavior`);
   }
 
   async initialize(
