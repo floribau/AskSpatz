@@ -154,10 +154,38 @@ export function LiveRace() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header onNewNegotiation={() => navigate("/new")} />
-        <main className="container px-4 md:px-6 py-8 text-center">
-          <p className="text-lg text-muted-foreground">Loading negotiation...</p>
+      <div 
+        className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+        style={{
+          backgroundImage: 'url(/background.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Top bar with back button and centered logo */}
+        <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
+          {/* Back button - top left */}
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
+          </Button>
+          
+          {/* Logo - centered */}
+          <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
+            <SpatzIcon size={36} />
+            <span className="text-xl font-semibold text-white">
+              ask<span className="text-gray-400">Spatz</span>
+            </span>
+          </Link>
+          
+          {/* Spacer for balance */}
+          <div className="w-20"></div>
+        </div>
+        <main className="w-full h-[calc(100vh-4rem)] flex items-center justify-center relative z-10">
+          <p className="text-lg text-white/80">Loading negotiation...</p>
         </main>
       </div>
     );
@@ -165,10 +193,38 @@ export function LiveRace() {
 
   if (!negotiation) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header onNewNegotiation={() => navigate("/new")} />
-        <main className="container px-4 md:px-6 py-8 text-center">
-          <p className="text-lg text-muted-foreground">Negotiation not found</p>
+      <div 
+        className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+        style={{
+          backgroundImage: 'url(/background.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Top bar with back button and centered logo */}
+        <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
+          {/* Back button - top left */}
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
+          </Button>
+          
+          {/* Logo - centered */}
+          <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
+            <SpatzIcon size={36} />
+            <span className="text-xl font-semibold text-white">
+              ask<span className="text-gray-400">Spatz</span>
+            </span>
+          </Link>
+          
+          {/* Spacer for balance */}
+          <div className="w-20"></div>
+        </div>
+        <main className="container px-4 md:px-6 py-8 text-center relative z-10">
+          <p className="text-lg text-white/80">Negotiation not found</p>
           <Button asChild className="mt-4">
             <Link to="/">Back to Dashboard</Link>
           </Button>
@@ -224,55 +280,66 @@ export function LiveRace() {
   const finishedAgentsCount = new Set(offers.map(o => o.vendor_id)).size;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header onNewNegotiation={() => navigate("/new")} />
+    <div 
+      className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{
+        backgroundImage: 'url(/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Top bar with back button and centered logo */}
+      <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
+        {/* Back button - top left */}
+        <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+          <Link to="/">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Link>
+        </Button>
+        
+        {/* Logo - centered */}
+        <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
+          <SpatzIcon size={36} />
+          <span className="text-xl font-semibold text-white">
+            ask<span className="text-gray-400">Spatz</span>
+          </span>
+        </Link>
+        
+        {/* Spacer for balance */}
+        <div className="w-20"></div>
+      </div>
 
-      <main className="container px-4 md:px-6 py-8">
-        {/* Back Link & Title */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
-        </div>
+      <main className="w-full px-4 md:px-6 py-8 relative z-10">
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <SpatzIcon size={32} />
-              <h1 className="text-2xl font-bold text-foreground">
-                Live Negotiation Race
-              </h1>
-            </div>
-            <p className="text-muted-foreground">{negotiation.title}</p>
-            <p className="text-sm text-muted-foreground">
-              {negotiation.productName}
-            </p>
-          </div>
+        {/* Title */}
+        <div className="flex flex-col items-center gap-4 mb-8 text-center">
+          <h1 className="text-3xl font-bold text-white">
+            {negotiation.productName || negotiation.title}
+          </h1>
           <StatusBadge status={negotiation.status} />
         </div>
 
         {/* Current Best Price Banner */}
-        <Card className="mb-8 bg-gradient-to-r from-success/10 to-success/5 border-success/30">
+        <Card className="mb-8 bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
           <CardContent className="py-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col items-center gap-4 text-center">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">
+                <p className="text-sm text-white/70 mb-1">
                   Current Best Price
                 </p>
                 {lowestPrice < Infinity ? (
                   <>
-                    <p className="text-4xl font-bold text-success">
+                    <p className="text-4xl font-bold text-green-400">
                       {formatCurrency(lowestPrice)}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-white/70 mt-1">
                       {winningVendor}
                     </p>
                   </>
                 ) : (
-                  <p className="text-2xl font-bold text-muted-foreground">
+                  <p className="text-2xl font-bold text-white/60">
                     Awaiting offers...
                   </p>
                 )}
@@ -280,14 +347,14 @@ export function LiveRace() {
               <div className="flex items-center gap-6">
                 <div className="grid grid-cols-2 gap-6 text-center">
                   <div>
-                    <p className="text-xs text-muted-foreground">Vendors</p>
-                    <p className="text-lg font-semibold">
+                    <p className="text-xs text-white/70">Vendors</p>
+                    <p className="text-lg font-semibold text-white">
                       {negotiation.vendors.length}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Finished</p>
-                    <p className="text-lg font-semibold text-success">
+                    <p className="text-xs text-white/70">Finished</p>
+                    <p className="text-lg font-semibold text-green-400">
                       {finishedAgentsCount} / {negotiation.vendors.length}
                     </p>
                   </div>
@@ -326,16 +393,16 @@ export function LiveRace() {
           />
 
           {/* Offers Widget */}
-          <Card>
+          <Card className="bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-success" />
+              <CardTitle className="flex items-center gap-2 text-white">
+                <DollarSign className="h-5 w-5 text-green-400" />
                 Extracted Offers ({offers.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {offers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-sm text-white/70 text-center py-4">
                   No offers extracted yet. Offers will appear here once the agent finishes negotiating.
                 </p>
               ) : (
@@ -343,14 +410,14 @@ export function LiveRace() {
                   {offers.map((offer) => (
                     <div
                       key={offer.id}
-                      className="p-4 border rounded-lg bg-muted/30"
+                      className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/50"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-muted-foreground mb-1">
+                          <p className="text-sm font-medium text-white/70 mb-1">
                             {offer.vendor_name}
                           </p>
-                          <p className="text-sm break-words">{offer.description}</p>
+                          <p className="text-sm break-words text-white/70">{offer.description}</p>
                           {/* Pros and Cons */}
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
@@ -382,7 +449,7 @@ export function LiveRace() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-2xl font-bold text-success">
+                          <p className="text-2xl font-bold text-green-400">
                             {formatCurrency(offer.price)}
                           </p>
                         </div>
@@ -397,9 +464,9 @@ export function LiveRace() {
 
         {/* Human Intervention Section (for REVIEW_REQUIRED) */}
         {negotiation.status === "REVIEW_REQUIRED" && (
-          <Card className="mt-8 border-warning/50">
+          <Card className="mt-8 bg-gray-900/80 backdrop-blur-md border-yellow-500/50 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-warning">
+              <CardTitle className="text-yellow-400 text-center">
                 Human Intervention Recommended
               </CardTitle>
             </CardHeader>
@@ -409,7 +476,7 @@ export function LiveRace() {
                   <SuggestionCard key={idx} suggestion={suggestion} />
                 ))}
               </div>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 justify-center">
                 <Button
                   onClick={handleApprove}
                   variant="success"
@@ -433,7 +500,7 @@ export function LiveRace() {
 
         {/* Always show intervention button for active negotiations */}
         {negotiation.status === "IN_PROGRESS" && (
-          <div className="mt-8">
+          <div className="mt-8 flex justify-center">
             <Button
               onClick={handleManualIntervention}
               className="gap-2 w-full md:w-auto"

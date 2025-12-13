@@ -111,6 +111,8 @@ app.post("/api/negotiations/start", async (req, res) => {
 async function runAgentForVendor(agent: Agent, localNegotiationId: string, productName: string) {
   let i = 0;
   let userMessage = "";
+  let consecutiveNoProgress = 0;
+  const MAX_CONSECUTIVE_NO_PROGRESS = 3; // Stop if no tools called for 3 iterations
 
   try {
     while (true) {
@@ -120,27 +122,78 @@ async function runAgentForVendor(agent: Agent, localNegotiationId: string, produ
         userMessage = "continue negotiating";
       }
       
-      console.log(`[${localNegotiationId}] user_message: ${userMessage}`);
-      const response = await agent.invoke(userMessage);
+      console.log(`[${localNegotiationId}] Iteration ${i + 1}, user_message: ${userMessage}`);
       
-      const hasFinishNegotiation = response.messages?.some(
-        (msg: any) => msg.name === "finish_negotiation"
-      );
-      
-      if (hasFinishNegotiation) {
-        console.log(`[${localNegotiationId}] Negotiation finished!`);
-        activeNegotiations.set(localNegotiationId, { agent, status: "completed" });
-        break;
+      try {
+        const response = await agent.invoke(userMessage);
+        
+        // Check if response is valid
+        if (!response || typeof response !== 'object') {
+          console.error(`[${localNegotiationId}] Invalid response format:`, response);
+          consecutiveNoProgress++;
+          if (consecutiveNoProgress >= MAX_CONSECUTIVE_NO_PROGRESS) {
+            console.log(`[${localNegotiationId}] Stopping: No progress detected (invalid responses)`);
+            activeNegotiations.set(localNegotiationId, { agent, status: "stuck" });
+            break;
+          }
+          i++;
+          continue;
+        }
+
+        // Count tool calls in this response
+        const messages = response.messages || [];
+        const toolCalls = messages.filter((msg: any) => msg.name && msg.name !== 'user' && msg.name !== 'assistant');
+        const currentToolCallCount = toolCalls.length;
+        
+        console.log(`[${localNegotiationId}] Response has ${currentToolCallCount} tool calls:`, toolCalls.map((t: any) => t.name));
+        
+        // Check for finish_negotiation
+        const hasFinishNegotiation = toolCalls.some(
+          (msg: any) => msg.name === "finish_negotiation"
+        );
+        
+        if (hasFinishNegotiation) {
+          console.log(`[${localNegotiationId}] Negotiation finished!`);
+          activeNegotiations.set(localNegotiationId, { agent, status: "completed" });
+          break;
+        }
+        
+        // Detect if agent is stuck (not calling any tools)
+        if (currentToolCallCount === 0) {
+          consecutiveNoProgress++;
+          console.log(`[${localNegotiationId}] No tools called (${consecutiveNoProgress}/${MAX_CONSECUTIVE_NO_PROGRESS})`);
+          
+          if (consecutiveNoProgress >= MAX_CONSECUTIVE_NO_PROGRESS) {
+            console.log(`[${localNegotiationId}] Stopping: Agent stuck - no tools called for ${MAX_CONSECUTIVE_NO_PROGRESS} iterations`);
+            activeNegotiations.set(localNegotiationId, { agent, status: "stuck" });
+            break;
+          }
+        } else {
+          // Reset counter if tools were called
+          consecutiveNoProgress = 0;
+        }
+        
+      } catch (invokeError) {
+        console.error(`[${localNegotiationId}] Error invoking agent:`, invokeError);
+        consecutiveNoProgress++;
+        if (consecutiveNoProgress >= MAX_CONSECUTIVE_NO_PROGRESS) {
+          console.log(`[${localNegotiationId}] Stopping: Too many errors`);
+          activeNegotiations.set(localNegotiationId, { agent, status: "error" });
+          break;
+        }
       }
       
       i++;
       
       // Safety limit to prevent infinite loops
       if (i > 50) {
-        console.log(`[${localNegotiationId}] Max iterations reached`);
+        console.log(`[${localNegotiationId}] Max iterations reached (50)`);
         activeNegotiations.set(localNegotiationId, { agent, status: "max_iterations" });
         break;
       }
+      
+      // Add a small delay to prevent tight loops
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   } catch (error) {
     console.error(`[${localNegotiationId}] Error during negotiation:`, error);
@@ -210,6 +263,7 @@ app.get("/api/negotiation-groups", async (req, res) => {
         product,
         quantity,
         status,
+        created_at,
         negotiation (id, vendor_id)
       `)
       .order("id", { ascending: false });
@@ -228,7 +282,7 @@ app.get("/api/negotiation-groups", async (req, res) => {
       savings_percent: 0, // Can be calculated
       status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
       vendors_engaged: Array.isArray(group.negotiation) ? group.negotiation.length : 0,
-      created_at: new Date().toISOString(), // Add created_at to table if needed
+      created_at: group.created_at || new Date().toISOString(),
     }));
 
     res.json(formattedGroups);
