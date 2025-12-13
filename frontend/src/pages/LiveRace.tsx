@@ -43,7 +43,6 @@ export function LiveRace() {
   const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
   const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -599,7 +598,7 @@ export function LiveRace() {
                           <span className="text-sm font-semibold text-success">Accepted Offer</span>
                         </div>
                       )}
-                      {!isAccepted && isBestValue && !isSelected && (
+                      {!isAccepted && isBestValue && (
                         <div className="flex items-center gap-2 mb-3 pb-2 border-b border-primary/30">
                           <Trophy className="h-5 w-5 text-primary" />
                           <span className="text-sm font-semibold text-primary">Recommended Choice</span>
@@ -726,10 +725,6 @@ export function LiveRace() {
                     setAcceptedOfferId(selectedOfferId);
                     setShowAcceptConfirm(false);
                     setShowOffersPanel(false);
-                    setSuccessMessage(`Offer from ${data.vendor_name} has been accepted successfully!`);
-                    
-                    // Clear success message after 5 seconds
-                    setTimeout(() => setSuccessMessage(null), 5000);
                     
                     toast({
                       title: "Offer Accepted",
@@ -752,19 +747,6 @@ export function LiveRace() {
           </DialogContent>
         </Dialog>
         
-        {/* Success Message Banner */}
-        {successMessage && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top">
-            <Card className="bg-success/90 text-white border-success shadow-lg">
-              <CardContent className="py-3 px-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  <p className="font-medium">{successMessage}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </main>
     </div>
   );
