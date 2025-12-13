@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -11,6 +11,7 @@ import { InterventionModal } from "@/components/InterventionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { NegotiationDetail, Message } from "@/data/types";
@@ -32,12 +33,17 @@ export function LiveRace() {
   const { toast } = useToast();
   const [showIntervention, setShowIntervention] = useState(false);
   const [showOffersPanel, setShowOffersPanel] = useState(false);
+  const hasUserSelectedOffer = useRef(false);
   const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [offerLabels, setOfferLabels] = useState<Record<number, string>>({});
   const [isLoadingLabels, setIsLoadingLabels] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [allMessages, setAllMessages] = useState<Message[]>([]);
+  const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
+  const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -60,7 +66,7 @@ export function LiveRace() {
           productName: data.productName || "",
           best_nap: data.startingPrice || 0,
           savings_percent: 0,
-          status: data.status === "running" ? "IN_PROGRESS" : data.status || "IN_PROGRESS",
+          status: data.status === "running" ? "IN_PROGRESS" : data.status === "accepted" ? "ACCEPTED" : data.status === "COMPLETED" ? "COMPLETED" : data.status || "IN_PROGRESS",
           vendors_engaged: data.vendors_engaged || 0,
           created_at: new Date().toISOString(),
           startingPrice: data.startingPrice || 0,
@@ -82,6 +88,13 @@ export function LiveRace() {
           setNegotiation(negotiationDetail);
           setAllMessages(data.messages || []);
           setOffers(data.offers || []);
+          setAcceptedOfferId(data.accepted_offer || null);
+          
+          // Pre-select accepted offer if one exists
+          if (data.accepted_offer) {
+            setSelectedOfferId(data.accepted_offer);
+          }
+          
           setIsLoading(false);
 
           // Stop polling if negotiation is finished
@@ -139,6 +152,32 @@ export function LiveRace() {
       fetchLabels();
     }
   }, [showOffersPanel, offers, offerLabels]);
+
+  // Pre-select recommended offer (Best Value with trophy icon) when labels are loaded and panel opens
+  useEffect(() => {
+    if (
+      showOffersPanel &&
+      !acceptedOfferId &&
+      offers.length > 0 &&
+      Object.keys(offerLabels).length > 0 &&
+      !hasUserSelectedOffer.current
+    ) {
+      // Find the offer with "Best Value" label (the one that shows "Recommended Choice" with trophy icon)
+      const recommendedOffer = offers.find(
+        (offer) => offerLabels[offer.id] === "Best Value"
+      );
+      
+      if (recommendedOffer && selectedOfferId !== recommendedOffer.id) {
+        setSelectedOfferId(recommendedOffer.id);
+      } else if (!recommendedOffer && selectedOfferId === null) {
+        // Fallback to lowest price if no "Best Value" label exists
+        const bestOffer = offers.reduce((best: Offer, current: Offer) => 
+          current.price < best.price ? current : best
+        );
+        setSelectedOfferId(bestOffer.id);
+      }
+    }
+  }, [showOffersPanel, offerLabels, offers, acceptedOfferId, selectedOfferId]);
 
   if (isLoading) {
     return (
@@ -531,16 +570,36 @@ export function LiveRace() {
                 .map((offer) => {
                   const label = offerLabels[offer.id];
                   const isBestValue = label === "Best Value";
+                  const isSelected = selectedOfferId === offer.id;
+                  const isAccepted = acceptedOfferId === offer.id;
+                  const isClickable = !acceptedOfferId;
+                  
                   return (
                     <div
                       key={offer.id}
+                      onClick={() => {
+                        if (isClickable) {
+                          setSelectedOfferId(offer.id);
+                          hasUserSelectedOffer.current = true; // Mark that user has manually selected
+                        }
+                      }}
                       className={`p-4 border rounded-lg transition-all ${
-                        isBestValue 
-                          ? "bg-primary/10 border-primary ring-2 ring-primary/50 shadow-lg" 
-                          : "bg-muted/30"
+                        isAccepted
+                          ? "bg-success/20 border-success ring-2 ring-success/50 shadow-lg cursor-default"
+                          : isSelected
+                          ? "bg-primary/10 border-primary ring-2 ring-primary/50 shadow-lg cursor-pointer hover:bg-primary/15"
+                          : isClickable
+                          ? "bg-muted/30 cursor-pointer hover:bg-muted/50 border-border"
+                          : "bg-muted/30 cursor-default border-border"
                       }`}
                     >
-                      {isBestValue && (
+                      {isAccepted && (
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-success/30">
+                          <CheckCircle className="h-5 w-5 text-success" />
+                          <span className="text-sm font-semibold text-success">Accepted Offer</span>
+                        </div>
+                      )}
+                      {!isAccepted && isBestValue && !isSelected && (
                         <div className="flex items-center gap-2 mb-3 pb-2 border-b border-primary/30">
                           <Trophy className="h-5 w-5 text-primary" />
                           <span className="text-sm font-semibold text-primary">Recommended Choice</span>
@@ -606,8 +665,106 @@ export function LiveRace() {
                 })}
             </div>
             )}
+            
+            {/* Accept Offer Button - only show when no offer is accepted */}
+            {!acceptedOfferId && selectedOfferId && offers.length > 0 && (
+              <div className="mt-6 pt-6 border-t">
+                <Button
+                  onClick={() => setShowAcceptConfirm(true)}
+                  className="w-full"
+                  size="lg"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Accept Offer
+                </Button>
+              </div>
+            )}
           </SheetContent>
         </Sheet>
+        
+        {/* Confirmation Dialog */}
+        <Dialog open={showAcceptConfirm} onOpenChange={setShowAcceptConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Accept Offer</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to accept this offer? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedOfferId && (() => {
+              const selectedOffer = offers.find(o => o.id === selectedOfferId);
+              return selectedOffer ? (
+                <div className="py-4">
+                  <p className="font-medium mb-2">{selectedOffer.vendor_name}</p>
+                  <p className="text-2xl font-bold text-success mb-2">
+                    {formatCurrency(selectedOffer.price)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{selectedOffer.description}</p>
+                </div>
+              ) : null;
+            })()}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAcceptConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!selectedOfferId || !id) return;
+                  
+                  try {
+                    const response = await fetch(`http://localhost:3001/api/negotiation-groups/${id}/accept-offer`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ offerId: selectedOfferId }),
+                    });
+                    
+                    if (!response.ok) {
+                      throw new Error("Failed to accept offer");
+                    }
+                    
+                    const data = await response.json();
+                    setAcceptedOfferId(selectedOfferId);
+                    setShowAcceptConfirm(false);
+                    setShowOffersPanel(false);
+                    setSuccessMessage(`Offer from ${data.vendor_name} has been accepted successfully!`);
+                    
+                    // Clear success message after 5 seconds
+                    setTimeout(() => setSuccessMessage(null), 5000);
+                    
+                    toast({
+                      title: "Offer Accepted",
+                      description: `Successfully accepted offer from ${data.vendor_name}`,
+                      variant: "success",
+                    });
+                  } catch (error) {
+                    console.error("Error accepting offer:", error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to accept offer. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Confirm
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Success Message Banner */}
+        {successMessage && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top">
+            <Card className="bg-success/90 text-white border-success shadow-lg">
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  <p className="font-medium">{successMessage}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -29,6 +29,11 @@ const statusConfig: Record<
     className:
       "border-muted-foreground/50 bg-muted text-muted-foreground",
   },
+  ACCEPTED: {
+    label: "Accepted",
+    className:
+      "border-green-500/50 bg-green-500/10 text-green-500",
+  },
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {

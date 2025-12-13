@@ -2,7 +2,8 @@ export type NegotiationStatus =
   | "IN_PROGRESS"
   | "REVIEW_REQUIRED"
   | "COMPLETED"
-  | "PENDING";
+  | "PENDING"
+  | "ACCEPTED";
 
 export interface Vendor {
   id: string;

@@ -423,7 +423,7 @@ app.get("/api/negotiation-groups", async (req, res) => {
         productName: "", // Can be populated from products table if linked
         best_nap: best_nap,
         savings_percent: savings_percent,
-        status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
+        status: group.status === "running" ? "IN_PROGRESS" : group.status === "accepted" ? "ACCEPTED" : "COMPLETED",
         vendors_engaged: Array.isArray(group.negotiation) ? group.negotiation.length : 0,
         created_at: new Date().toISOString(),
       };
@@ -610,6 +610,7 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
       negotiations: negotiations || [],
       messages: formattedMessages,
       offers: formattedOffers,
+      accepted_offer: group.accepted_offer || null,
       // Placeholder values - can be calculated from offers later
       startingPrice: 25000,
       targetReduction: 25,
@@ -677,6 +678,77 @@ Respond with ONLY a valid JSON array:
   } catch (err) {
     console.error("[API] Error generating offer labels:", err);
     res.status(500).json({ error: "Failed to generate offer labels" });
+  }
+});
+
+// Accept an offer for a negotiation group
+app.post("/api/negotiation-groups/:id/accept-offer", async (req, res) => {
+  const groupId = req.params.id;
+  const { offerId } = req.body;
+
+  if (!offerId) {
+    return res.status(400).json({ error: "offerId is required" });
+  }
+
+  try {
+    // Verify the offer belongs to this negotiation group
+    const { data: offer, error: offerError } = await supabase
+      .from("offer")
+      .select("id, negotiation_id")
+      .eq("id", offerId)
+      .single();
+
+    if (offerError || !offer) {
+      return res.status(404).json({ error: "Offer not found" });
+    }
+
+    // Get the negotiation to verify it belongs to the group
+    const { data: negotiation, error: negError } = await supabase
+      .from("negotiation")
+      .select("id, negotiation_group_id")
+      .eq("id", offer.negotiation_id)
+      .single();
+
+    if (negError || !negotiation || negotiation.negotiation_group_id !== parseInt(groupId)) {
+      return res.status(400).json({ error: "Offer does not belong to this negotiation group" });
+    }
+
+    // Update the negotiation group with the accepted offer and set status to "accepted"
+    const { data: updatedGroup, error: updateError } = await supabase
+      .from("negotiation_group")
+      .update({ accepted_offer: offerId, status: "accepted" })
+      .eq("id", groupId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("[API] Error accepting offer:", updateError.message);
+      return res.status(500).json({ error: "Failed to accept offer" });
+    }
+
+    // Get vendor name for response
+    const { data: vendorData } = await supabase
+      .from("negotiation")
+      .select("vendor_id")
+      .eq("id", offer.negotiation_id)
+      .single();
+
+    const { data: vendor } = vendorData?.vendor_id
+      ? await supabase
+          .from("vendors")
+          .select("name")
+          .eq("id", vendorData.vendor_id)
+          .single()
+      : { data: null };
+
+    res.json({
+      success: true,
+      accepted_offer: offerId,
+      vendor_name: vendor?.name || "Unknown Vendor",
+    });
+  } catch (err) {
+    console.error("[API] Error accepting offer:", err);
+    res.status(500).json({ error: "Failed to accept offer" });
   }
 });
 
