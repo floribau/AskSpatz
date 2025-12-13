@@ -305,17 +305,158 @@ app.get("/api/negotiation-groups", async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch negotiation groups" });
     }
 
-    // Map to frontend format
-    const formattedGroups = groups.map((group) => ({
-      id: group.id.toString(),
-      title: group.name,
-      productName: "", // Can be populated from products table if linked
-      best_nap: 0, // Can be calculated from offers
-      savings_percent: 0, // Can be calculated
-      status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
-      vendors_engaged: Array.isArray(group.negotiation) ? group.negotiation.length : 0,
-      created_at: new Date().toISOString(),
-    }));
+    // Fetch all offers and negotiation states for all negotiation groups to calculate best_nap and savings
+    const groupIds = groups.map((g) => g.id);
+    const { data: allNegotiations, error: negError } = await supabase
+      .from("negotiation")
+      .select("id, negotiation_group_id")
+      .in("negotiation_group_id", groupIds.length > 0 ? groupIds : [-1]);
+
+    const negotiationIds = allNegotiations?.map((n) => n.id).filter(Boolean) || [];
+    
+    // Fetch offers for best_nap calculation
+    const { data: allOffers, error: offersError } = await supabase
+      .from("offer")
+      .select("id, negotiation_id, price")
+      .in("negotiation_id", negotiationIds.length > 0 ? negotiationIds : [-1]);
+
+    if (offersError) {
+      console.error("[API] Error fetching offers:", offersError.message);
+    }
+
+    // Fetch negotiation states to get starting prices
+    const { data: allStates, error: statesError } = await supabase
+      .from("negotiation_state")
+      .select("id, negotiation_id, price, created_at")
+      .in("negotiation_id", negotiationIds.length > 0 ? negotiationIds : [-1])
+      .order("created_at", { ascending: true });
+
+    if (statesError) {
+      console.error("[API] Error fetching negotiation states:", statesError.message);
+    }
+
+    // Calculate best_nap and savings_percent for each group
+    const formattedGroups = groups.map((group) => {
+      const groupNegotiations = allNegotiations?.filter(
+        (n) => n.negotiation_group_id === group.id
+      ) || [];
+      const groupNegotiationIds = groupNegotiations.map((n) => n.id);
+      
+      // Get offers for this group (final offers when negotiation is finished)
+      const groupOffers = (allOffers || []).filter(
+        (offer) => offer.negotiation_id && groupNegotiationIds.includes(offer.negotiation_id)
+      ) || [];
+
+      // Get states for this group (current prices during negotiation)
+      const groupStates = (allStates || []).filter(
+        (state) => state.negotiation_id && groupNegotiationIds.includes(state.negotiation_id)
+      ) || [];
+
+      // Calculate best_nap from:
+      // For ongoing negotiations: use latest negotiation states (current best offers)
+      // For completed negotiations: use final offers
+      let best_nap = 0;
+      
+      // Helper function to safely parse price
+      const parsePrice = (price: any): number | null => {
+        if (price == null) return null;
+        const num = typeof price === 'string' ? parseFloat(price) : Number(price);
+        return !isNaN(num) && num > 0 ? num : null;
+      };
+      
+      const isOngoing = group.status === "running";
+      
+      if (isOngoing) {
+        // For ongoing negotiations, get the current best price from each negotiation (tile)
+        // Then take the minimum across all negotiations
+        const bestPricesFromEachNegotiation = groupNegotiationIds
+          .map((negId) => {
+            // Get all states for this negotiation
+            const statesForNeg = groupStates
+              .filter((s) => s.negotiation_id === negId)
+              .map((s) => parsePrice(s.price))
+              .filter((p): p is number => p !== null);
+            
+            // Return the best (lowest) price from this negotiation
+            return statesForNeg.length > 0 ? Math.min(...statesForNeg) : null;
+          })
+          .filter((p): p is number => p !== null);
+        
+        // Take the minimum of all best prices from each negotiation
+        best_nap = bestPricesFromEachNegotiation.length > 0 ? Math.min(...bestPricesFromEachNegotiation) : 0;
+      } else {
+        // For completed negotiations, use final offers
+        const offerPrices = groupOffers
+          .map((offer) => parsePrice(offer.price))
+          .filter((p): p is number => p !== null);
+        
+        best_nap = offerPrices.length > 0 ? Math.min(...offerPrices) : 0;
+      }
+      
+      // Calculate starting price from first negotiation state (most accurate)
+      let startingPrice = 0;
+      if (isOngoing && groupStates.length > 0) {
+        // For ongoing: use first state from each negotiation (starting price per vendor)
+        const startingPrices = groupNegotiationIds
+          .map((negId) => {
+            const statesForNeg = groupStates
+              .filter((s) => s.negotiation_id === negId)
+              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            return statesForNeg.length > 0 ? parsePrice(statesForNeg[0].price) : null;
+          })
+          .filter((p): p is number => p !== null);
+        
+        // Use the highest starting price across all vendors
+        startingPrice = startingPrices.length > 0 ? Math.max(...startingPrices) : 0;
+      } else if (!isOngoing) {
+        // For completed: use highest offer price as starting price
+        const offerPrices = groupOffers
+          .map((offer) => parsePrice(offer.price))
+          .filter((p): p is number => p !== null);
+        
+        startingPrice = offerPrices.length > 0 ? Math.max(...offerPrices) : 0;
+      }
+
+      // Calculate savings_percent
+      const savings_percent =
+        startingPrice > 0 && best_nap > 0 && best_nap < startingPrice
+          ? Math.round(((startingPrice - best_nap) / startingPrice) * 100)
+          : 0;
+
+      // Debug logging
+      const bestPricesFromEachNegotiation = isOngoing ? groupNegotiationIds
+        .map((negId) => {
+          const statesForNeg = groupStates
+            .filter((s) => s.negotiation_id === negId)
+            .map((s) => parsePrice(s.price))
+            .filter((p): p is number => p !== null);
+          return statesForNeg.length > 0 ? Math.min(...statesForNeg) : null;
+        })
+        .filter((p): p is number => p !== null) : [];
+      
+      const offerPrices = !isOngoing ? groupOffers
+        .map((offer) => parsePrice(offer.price))
+        .filter((p): p is number => p !== null) : [];
+      
+      console.log(`[API] Group ${group.id} (${group.name}) [${isOngoing ? 'ONGOING' : 'COMPLETED'}]: ${groupOffers.length} offers, ${groupStates.length} states, ${groupNegotiationIds.length} negotiations`);
+      if (isOngoing) {
+        console.log(`[API]   - Best price from each negotiation:`, bestPricesFromEachNegotiation);
+      } else {
+        console.log(`[API]   - Offer prices:`, offerPrices);
+      }
+      console.log(`[API]   - Starting price: ${startingPrice}, best_nap: ${best_nap}, savings: ${savings_percent}%`);
+
+      return {
+        id: group.id.toString(),
+        title: group.name,
+        productName: "", // Can be populated from products table if linked
+        best_nap: best_nap,
+        savings_percent: savings_percent,
+        status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
+        vendors_engaged: Array.isArray(group.negotiation) ? group.negotiation.length : 0,
+        created_at: new Date().toISOString(),
+      };
+    });
 
     res.json(formattedGroups);
   } catch (err) {

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { NegotiationCard } from "@/components/NegotiationCard";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,6 +57,8 @@ export function Index() {
           throw new Error("Failed to fetch negotiations");
         }
         const data = await response.json();
+        console.log("[Index] Fetched negotiations:", data);
+        console.log("[Index] Sample negotiation:", data[0]);
         setNegotiations(data);
       } catch (error) {
         console.error("Error fetching negotiations:", error);
@@ -212,13 +213,58 @@ export function Index() {
     }
   };
 
+  const handleVendorClick = (vendor: Vendor) => {
+    setSelectedVendor(vendor);
+    setEditedBehaviour(vendor.behaviour || "");
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveBehaviour = async () => {
+    if (!selectedVendor) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/vendors/${selectedVendor.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ behaviour: editedBehaviour }),
+      });
+
+      if (response.ok) {
+        // Update the vendor in the local state
+        setVendors((prev) =>
+          prev.map((v) =>
+            v.id === selectedVendor.id ? { ...v, behaviour: editedBehaviour } : v
+          )
+        );
+        toast({
+          title: "Vendor updated",
+          description: `Behavior for ${selectedVendor.name} has been updated.`,
+          variant: "success",
+        });
+        setIsEditModalOpen(false);
+      } else {
+        throw new Error("Failed to update vendor");
+      }
+    } catch (error) {
+      console.error("Error updating vendor:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update vendor behavior.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const activeNegotiations = negotiations.filter(
     (n) => n.status === "IN_PROGRESS" || n.status === "REVIEW_REQUIRED"
   );
   const completedNegotiations = negotiations.filter(
     (n) => n.status === "COMPLETED"
   );
-
+  
   return (
     <div 
       className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
@@ -298,7 +344,7 @@ export function Index() {
           </div>
 
           {/* Dark gray tile container for negotiations */}
-          <div className="bg-gray-900 rounded-t-2xl mt-64 p-6 md:p-8">
+          <div className="bg-gray-900/80 rounded-t-2xl mt-64 p-6 md:p-8">
             <Tabs defaultValue="active" className="space-y-6">
               <div className="flex justify-start">
                 <TabsList className="bg-gray-800">

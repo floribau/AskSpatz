@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -37,16 +37,10 @@ export function LiveRace() {
   const [offerLabels, setOfferLabels] = useState<Record<number, string>>({});
   const [isLoadingLabels, setIsLoadingLabels] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [allMessages, setAllMessages] = useState<Message[]>([]);
-  const hasInitializedSelection = useRef(false);
 
   useEffect(() => {
     if (!id) return;
-
-    // Reset initialization flag and selection when negotiation ID changes
-    hasInitializedSelection.current = false;
-    setSelectedVendorId(null);
 
     let intervalId: NodeJS.Timeout | null = null;
     let isMounted = true;
@@ -89,12 +83,6 @@ export function LiveRace() {
           setAllMessages(data.messages || []);
           setOffers(data.offers || []);
           setIsLoading(false);
-
-          // Auto-select the first vendor only on initial load, not on refetches
-          if (!hasInitializedSelection.current && data.vendors && data.vendors.length > 0) {
-            setSelectedVendorId(data.vendors[0].id);
-            hasInitializedSelection.current = true;
-          }
 
           // Stop polling if negotiation is finished
           if (data.status === "finished" || data.status === "COMPLETED") {
@@ -166,7 +154,7 @@ export function LiveRace() {
         {/* Top bar with back button and centered logo */}
         <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
           {/* Back button - top left */}
-          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/80">
             <Link to="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -177,7 +165,7 @@ export function LiveRace() {
           <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
             <SpatzIcon size={36} />
             <span className="text-xl font-semibold text-white">
-              ask<span className="text-gray-400">Spatz</span>
+              ask<span className="text-gray-900">Spatz</span>
             </span>
           </Link>
           
@@ -205,7 +193,7 @@ export function LiveRace() {
         {/* Top bar with back button and centered logo */}
         <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
           {/* Back button - top left */}
-          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/80">
             <Link to="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -216,7 +204,7 @@ export function LiveRace() {
           <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
             <SpatzIcon size={36} />
             <span className="text-xl font-semibold text-white">
-              ask<span className="text-gray-400">Spatz</span>
+              ask<span className="text-gray-900">Spatz</span>
             </span>
           </Link>
           
@@ -303,7 +291,7 @@ export function LiveRace() {
         <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
           <SpatzIcon size={36} />
           <span className="text-xl font-semibold text-white">
-            ask<span className="text-gray-400">Spatz</span>
+            ask<span className="text-gray-900">Spatz</span>
           </span>
         </Link>
         
@@ -380,16 +368,11 @@ export function LiveRace() {
           <LiveRaceChart
             priceHistory={negotiation.priceHistory}
             vendors={negotiation.vendors}
-            selectedVendorId={selectedVendorId}
-            onVendorClick={setSelectedVendorId}
             finishedVendorIds={offers.map(o => String(o.vendor_id))}
           />
           <CommunicationLog 
-            messages={
-              selectedVendorId 
-                ? allMessages.filter((m) => m.vendor_id && String(m.vendor_id) === String(selectedVendorId))
-                : allMessages
-            } 
+            messages={allMessages}
+            vendors={negotiation.vendors}
           />
 
           {/* Offers Widget */}
@@ -410,7 +393,7 @@ export function LiveRace() {
                   {offers.map((offer) => (
                     <div
                       key={offer.id}
-                      className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/50"
+                      className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/80"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
