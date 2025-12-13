@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Play } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { availableVendors, vendorCategories } from "@/data/vendors";
+import { Vendor } from "@/data/types";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +24,8 @@ export function NewNegotiation() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [configForm, setConfigForm] = useState<ConfigForm>({
     negotiationName: "",
     productName: "",
@@ -31,6 +33,33 @@ export function NewNegotiation() {
     targetReduction: 25,
     selectedVendors: [],
   });
+
+  // Fetch vendors from backend
+  useEffect(() => {
+    async function fetchVendors() {
+      try {
+        const response = await fetch("http://localhost:3001/api/vendors");
+        if (!response.ok) {
+          throw new Error("Failed to fetch vendors");
+        }
+        const data = await response.json();
+        setVendors(data);
+      } catch (error) {
+        console.error("Error fetching vendors:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load vendors from server",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingVendors(false);
+      }
+    }
+    fetchVendors();
+  }, [toast]);
+
+  // Get unique categories from fetched vendors
+  const vendorCategories = ["all", ...new Set(vendors.map((v) => v.category))];
 
   const targetPrice =
     configForm.startingPrice * (1 - configForm.targetReduction / 100);
@@ -44,7 +73,7 @@ export function NewNegotiation() {
     }));
   };
 
-  const handleStartNegotiation = () => {
+  const handleStartNegotiation = async () => {
     if (!configForm.negotiationName) {
       toast({
         title: "Missing Information",
@@ -62,15 +91,45 @@ export function NewNegotiation() {
       return;
     }
 
-    // In a real app, this would create the negotiation via API
-    toast({
-      title: "Negotiation Started",
-      description: `Starting negotiation with ${configForm.selectedVendors.length} vendor(s).`,
-      variant: "success",
-    });
+    try {
+      // Call the backend API to start negotiations for each selected vendor
+      const response = await fetch("http://localhost:3001/api/negotiations/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          vendorIds: configForm.selectedVendors,
+          negotiationName: configForm.negotiationName,
+          productName: configForm.productName,
+          startingPrice: configForm.startingPrice,
+          targetReduction: configForm.targetReduction,
+        }),
+      });
 
-    // Navigate to the new negotiation (using first mock negotiation for demo)
-    navigate("/negotiation/NEG-2024-001");
+      if (!response.ok) {
+        throw new Error(`Failed to start negotiations: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Negotiations started:", data);
+
+      toast({
+        title: "Negotiation Started",
+        description: `Starting negotiation with ${configForm.selectedVendors.length} vendor(s).`,
+        variant: "success",
+      });
+
+      // Navigate to the new negotiation (using first mock negotiation for demo)
+      navigate("/negotiation/NEG-2024-001");
+    } catch (error) {
+      console.error("Error starting negotiations:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to start negotiations",
+        variant: "destructive",
+      });
+    }
   };
 
   const canStart =
@@ -205,13 +264,14 @@ export function NewNegotiation() {
 
           {/* Vendor Selection */}
           <VendorSelector
-            vendors={availableVendors}
+            vendors={vendors}
             selectedVendors={configForm.selectedVendors}
             onToggleVendor={handleToggleVendor}
             categoryFilter={categoryFilter}
             onCategoryChange={setCategoryFilter}
             categories={vendorCategories}
             startingPrice={configForm.startingPrice}
+            isLoading={isLoadingVendors}
           />
         </div>
       </main>

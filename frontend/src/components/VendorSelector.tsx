@@ -12,6 +12,7 @@ interface VendorSelectorProps {
   onCategoryChange: (category: string) => void;
   categories: string[];
   startingPrice: number;
+  isLoading?: boolean;
 }
 
 export function VendorSelector({
@@ -22,6 +23,7 @@ export function VendorSelector({
   onCategoryChange,
   categories,
   startingPrice,
+  isLoading = false,
 }: VendorSelectorProps) {
   const filteredVendors =
     categoryFilter === "all"
@@ -57,63 +59,71 @@ export function VendorSelector({
 
         {/* Vendor List */}
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
-          {filteredVendors.map((vendor) => {
-            const isSelected = selectedVendors.includes(vendor.id);
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-8">
+              Loading vendors...
+            </div>
+          ) : (
+            <>
+              {filteredVendors.map((vendor) => {
+                const isSelected = selectedVendors.includes(vendor.id);
 
-            return (
-              <button
-                key={vendor.id}
-                onClick={() => onToggleVendor(vendor.id)}
-                className={cn(
-                  "w-full text-left p-4 rounded-lg border-2 transition-all",
-                  isSelected
-                    ? "border-primary bg-primary/5"
-                    : "border-transparent bg-muted hover:border-muted-foreground/30"
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: vendor.color }}
-                    />
-                    <div>
-                      <p className="font-semibold text-foreground">
-                        {vendor.company}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {vendor.name}
-                      </p>
-                      <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-background rounded">
-                        {vendor.category}
-                      </span>
-                      {isSelected && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Will negotiate from {formatCurrency(startingPrice)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div
+                return (
+                  <button
+                    key={vendor.id}
+                    onClick={() => onToggleVendor(vendor.id)}
                     className={cn(
-                      "w-6 h-6 rounded border-2 flex items-center justify-center",
+                      "w-full text-left p-4 rounded-lg border-2 transition-all",
                       isSelected
-                        ? "bg-primary border-primary"
-                        : "border-muted-foreground/30"
+                        ? "border-primary bg-primary/5"
+                        : "border-transparent bg-muted hover:border-muted-foreground/30"
                     )}
                   >
-                    {isSelected && (
-                      <Check className="h-4 w-4 text-primary-foreground" />
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-          {filteredVendors.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">
-              No vendors in this category
-            </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: vendor.color }}
+                        />
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            {vendor.company}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {vendor.name}
+                          </p>
+                          <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-background rounded">
+                            {vendor.category}
+                          </span>
+                          {isSelected && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Will negotiate from {formatCurrency(startingPrice)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        className={cn(
+                          "w-6 h-6 rounded border-2 flex items-center justify-center",
+                          isSelected
+                            ? "bg-primary border-primary"
+                            : "border-muted-foreground/30"
+                        )}
+                      >
+                        {isSelected && (
+                          <Check className="h-4 w-4 text-primary-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredVendors.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  No vendors found
+                </p>
+              )}
+            </>
           )}
         </div>
       </CardContent>

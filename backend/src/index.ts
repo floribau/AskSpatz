@@ -30,7 +30,7 @@ const activeNegotiations = new Map<string, { agent: Agent; status: string }>();
 
 // Start negotiation endpoint
 app.post("/api/negotiations/start", async (req, res) => {
-  const { vendorIds, negotiationName, productName, startingPrice, targetReduction } = req.body;
+  const { vendorIds, negotiationName, productName, startingPrice, targetReduction, negotiationGroupId } = req.body;
 
   if (!vendorIds || !Array.isArray(vendorIds) || vendorIds.length === 0) {
     return res.status(400).json({ error: "vendorIds array is required" });
@@ -42,20 +42,22 @@ app.post("/api/negotiations/start", async (req, res) => {
 
   const negotiationPromises = vendorIds.map(async (vendorId: string) => {
     try {
-      const negotiationId = `${Date.now()}-${vendorId}`;
+      const localNegotiationId = `${Date.now()}-${vendorId}`;
       const agent = new Agent();
       
-      activeNegotiations.set(negotiationId, { agent, status: "initializing" });
+      activeNegotiations.set(localNegotiationId, { agent, status: "initializing" });
       
-      await agent.initialize(vendorId);
-      activeNegotiations.set(negotiationId, { agent, status: "running" });
+      await agent.initialize(vendorId, negotiationGroupId);
+      activeNegotiations.set(localNegotiationId, { agent, status: "running" });
       
       // Run the agent in the background
-      runAgentForVendor(agent, negotiationId, productName);
+      runAgentForVendor(agent, localNegotiationId, productName);
       
       return {
         vendorId,
-        negotiationId,
+        localNegotiationId,
+        negotiationId: agent.negotiation_id, // Database negotiation ID
+        conversationId: agent.conversation_id,
         status: "started",
       };
     } catch (error) {
@@ -73,7 +75,7 @@ app.post("/api/negotiations/start", async (req, res) => {
 });
 
 // Run agent for a specific vendor
-async function runAgentForVendor(agent: Agent, negotiationId: string, productName: string) {
+async function runAgentForVendor(agent: Agent, localNegotiationId: string, productName: string) {
   let i = 0;
   let userMessage = "";
 
@@ -85,7 +87,7 @@ async function runAgentForVendor(agent: Agent, negotiationId: string, productNam
         userMessage = "continue negotiating";
       }
       
-      console.log(`[${negotiationId}] user_message: ${userMessage}`);
+      console.log(`[${localNegotiationId}] user_message: ${userMessage}`);
       const response = await agent.invoke(userMessage);
       
       const hasFinishNegotiation = response.messages?.some(
@@ -93,8 +95,8 @@ async function runAgentForVendor(agent: Agent, negotiationId: string, productNam
       );
       
       if (hasFinishNegotiation) {
-        console.log(`[${negotiationId}] Negotiation finished!`);
-        activeNegotiations.set(negotiationId, { agent, status: "completed" });
+        console.log(`[${localNegotiationId}] Negotiation finished!`);
+        activeNegotiations.set(localNegotiationId, { agent, status: "completed" });
         break;
       }
       
@@ -102,14 +104,14 @@ async function runAgentForVendor(agent: Agent, negotiationId: string, productNam
       
       // Safety limit to prevent infinite loops
       if (i > 50) {
-        console.log(`[${negotiationId}] Max iterations reached`);
-        activeNegotiations.set(negotiationId, { agent, status: "max_iterations" });
+        console.log(`[${localNegotiationId}] Max iterations reached`);
+        activeNegotiations.set(localNegotiationId, { agent, status: "max_iterations" });
         break;
       }
     }
   } catch (error) {
-    console.error(`[${negotiationId}] Error during negotiation:`, error);
-    activeNegotiations.set(negotiationId, { agent, status: "error" });
+    console.error(`[${localNegotiationId}] Error during negotiation:`, error);
+    activeNegotiations.set(localNegotiationId, { agent, status: "error" });
   }
 }
 
@@ -120,6 +122,47 @@ app.get("/api/negotiations/:id/status", (req, res) => {
     return res.status(404).json({ error: "Negotiation not found" });
   }
   res.json({ status: negotiation.status });
+});
+
+// Get all vendors
+app.get("/api/vendors", async (req, res) => {
+  try {
+    const { data: vendors, error } = await supabase
+      .from("vendors")
+      .select("*")
+      .order("id");
+
+    if (error) {
+      console.error("[API] Error fetching vendors:", error.message);
+      return res.status(500).json({ error: "Failed to fetch vendors" });
+    }
+
+    // Map to frontend format with generated colors
+    const colors = [
+      "hsl(207, 90%, 61%)",
+      "hsl(142, 71%, 45%)",
+      "hsl(262, 83%, 58%)",
+      "hsl(25, 95%, 53%)",
+      "hsl(330, 81%, 60%)",
+      "hsl(235, 76%, 60%)",
+      "hsl(0, 84%, 60%)",
+      "hsl(48, 96%, 53%)",
+    ];
+
+    const formattedVendors = vendors.map((vendor, index) => ({
+      id: vendor.id.toString(),
+      name: vendor.name,
+      company: vendor.name, // Use name as company for now
+      color: colors[index % colors.length],
+      category: "Vendor",
+      behaviour: vendor.behaviour,
+    }));
+
+    res.json(formattedVendors);
+  } catch (err) {
+    console.error("[API] Error fetching vendors:", err);
+    res.status(500).json({ error: "Failed to fetch vendors" });
+  }
 });
 
 // Health check

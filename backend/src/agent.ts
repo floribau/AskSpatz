@@ -3,11 +3,14 @@ import * as z from "zod";
 import dotenv from "dotenv";
 import { initChatModel, HumanMessage, SystemMessage } from "langchain";
 import systemPrompt from "./prompt.js";
+import { supabase } from "./supabase.js";
 
 dotenv.config();
 
 class Agent {
   conversation_id: number | null = null;
+  negotiation_id: number | null = null;
+  vendor_id: number | null = null;
   private agent: any = null;
   message_history: string[] = [];
 
@@ -76,7 +79,9 @@ class Agent {
     return [writeEmail, finishNegotiation];
   }
 
-  async initialize(vendorId: string = "8"): Promise<void> {
+  async initialize(vendorId: string = "8", negotiationGroupId?: number): Promise<void> {
+    this.vendor_id = parseInt(vendorId) || 8;
+
     // Create a new conversation
     const conversationCreateResponse = await fetch(
       "https://negbot-backend-ajdxh9axb0ddb0e9.westeurope-01.azurewebsites.net/api/conversations/?team_id=220239",
@@ -84,7 +89,7 @@ class Agent {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vendor_id: parseInt(vendorId) || 8,
+          vendor_id: this.vendor_id,
           title: "Price Negotiation - Q4 Order"
         })
       }
@@ -100,6 +105,25 @@ class Agent {
     console.log("Created conversation:", conversationData);
     this.conversation_id = conversationData.id;
 
+    // Create a new negotiation record in the database
+    const { data: negotiation, error } = await supabase
+      .from("negotiation")
+      .insert({
+        vendor_id: this.vendor_id,
+        conversation_id: this.conversation_id,
+        negotiation_group_id: negotiationGroupId || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[Agent] Failed to create negotiation record:", error.message);
+    } else {
+      this.negotiation_id = negotiation.id;
+      console.log(`[Agent] Created negotiation record: ${this.negotiation_id}`);
+    }
+
+    
     this.agent = await createAgent({
       model: "claude-haiku-4-5-20251001",
       tools: this.createTools(),
