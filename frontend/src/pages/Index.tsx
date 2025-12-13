@@ -11,6 +11,7 @@ export function Index() {
   const navigate = useNavigate();
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [typingText, setTypingText] = useState("");
@@ -85,10 +86,34 @@ export function Index() {
     return () => clearTimeout(timeout);
   }, [typingText, currentExampleIndex, isDeleting, inputValue, examples]);
 
-  const handleSubmit = () => {
-    if (inputValue.trim()) {
-      // Navigate to new negotiation page with the input value
-      navigate("/new", { state: { naturalLanguageInput: inputValue.trim() } });
+  const handleSubmit = async () => {
+    if (inputValue.trim() && !isSubmitting) {
+      setIsSubmitting(true);
+      try {
+        // Call the API to start negotiation with vendors 56, 57, 58
+        const response = await fetch("http://localhost:3001/api/negotiations/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vendorIds: ["56", "57", "58"],
+            negotiationName: "Natural Language Negotiation",
+            productName: inputValue.trim().substring(0, 50),
+            userRequest: inputValue.trim(),
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Navigate to the live race page with the negotiation group ID
+          navigate(`/negotiation/${data.negotiationGroupId}`);
+        } else {
+          console.error("Failed to start negotiation");
+          setIsSubmitting(false);
+        }
+      } catch (error) {
+        console.error("Error starting negotiation:", error);
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -148,13 +173,14 @@ export function Index() {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder=""
-                className="w-full min-h-[120px] px-6 py-4 pr-20 text-white text-lg bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all"
+                disabled={isSubmitting}
+                className="w-full min-h-[120px] px-6 py-4 pr-20 text-white text-lg bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all disabled:opacity-50"
                 style={{ 
                   fontFamily: 'inherit',
                   lineHeight: '1.5'
                 }}
               />
-              {!inputValue && typingText && (
+              {!inputValue && typingText && !isSubmitting && (
                 <div className="absolute top-4 left-6 text-white/50 text-lg pointer-events-none">
                   {typingText}
                   <span className="animate-pulse">|</span>
@@ -162,11 +188,15 @@ export function Index() {
               )}
               <Button
                 onClick={handleSubmit}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isSubmitting}
                 size="sm"
                 className="absolute bottom-4 right-4 h-8 px-3 bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ArrowRight className="h-4 w-4" />
+                {isSubmitting ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <ArrowRight className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <Button

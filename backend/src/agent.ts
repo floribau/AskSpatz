@@ -13,6 +13,7 @@ interface ProductInfo {
   quantity: number;
   startingPrice?: number;
   targetReduction?: number;
+  userRequest?: string;
 }
 
 interface VendorInfo {
@@ -447,6 +448,14 @@ class Agent {
     contextSection += `- Negotiate favorable payment terms, warranties, and service agreements\n`;
     contextSection += `- Explore volume discounts, bundled offerings, and value-adds\n`;
     contextSection += `- Maintain a professional relationship with the vendor for future business\n`;
+    
+    // Add user's natural language request if provided
+    if (this.productInfo?.userRequest) {
+      contextSection += `\n### User's Original Request\n`;
+      contextSection += `The user described their needs as follows:\n`;
+      contextSection += `"${this.productInfo.userRequest}"\n`;
+      contextSection += `\nUse this context to better understand what the user is looking for and tailor your negotiation accordingly.\n`;
+    }
     
     return systemPrompt + contextSection;
   }

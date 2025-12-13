@@ -34,7 +34,7 @@ const activeNegotiations = new Map<string, { agent: Agent; status: string }>();
 
 // Start negotiation endpoint
 app.post("/api/negotiations/start", async (req, res) => {
-  const { vendorIds, negotiationName, productName, startingPrice, targetReduction, quantity } = req.body;
+  const { vendorIds, negotiationName, productName, startingPrice, targetReduction, quantity, userRequest } = req.body;
 
   if (!vendorIds || !Array.isArray(vendorIds) || vendorIds.length === 0) {
     return res.status(400).json({ error: "vendorIds array is required" });
@@ -43,6 +43,9 @@ app.post("/api/negotiations/start", async (req, res) => {
   console.log(`[API] Starting negotiations with vendors: ${vendorIds.join(", ")}`);
   console.log(`[API] Negotiation: ${negotiationName}, Product: ${productName}`);
   console.log(`[API] Starting Price: ${startingPrice}, Target Reduction: ${targetReduction}%`);
+  if (userRequest) {
+    console.log(`[API] User Request: ${userRequest}`);
+  }
 
   // First, create a negotiation_group for this batch of negotiations
   const { data: negotiationGroup, error: groupError } = await supabase
@@ -76,6 +79,7 @@ app.post("/api/negotiations/start", async (req, res) => {
         quantity: quantity || 1,
         startingPrice: startingPrice ? parseFloat(startingPrice) : undefined,
         targetReduction: targetReduction ? parseFloat(targetReduction) : undefined,
+        userRequest: userRequest || undefined,
       });
       activeNegotiations.set(localNegotiationId, { agent, status: "running" });
       
