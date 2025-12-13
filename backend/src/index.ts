@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
-import setup_vendors from "./setupVendors.js";
+import setupVendors from "./setupVendors.js";
 import { initChatModel, HumanMessage, SystemMessage } from "langchain";
  
 const app = express();
@@ -27,7 +27,7 @@ async function testSupabaseConnection() {
 }
 
 testSupabaseConnection();
-setup_vendors();
+// setupVendors();
 
 // Store active negotiations
 const activeNegotiations = new Map<string, { agent: Agent; status: string }>();
