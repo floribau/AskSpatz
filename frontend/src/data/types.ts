@@ -31,6 +31,8 @@ export interface Message {
   name: string;
   content: string;
   timestamp: string;
+  vendor_id?: string | number | null;
+  conversation_id?: number | null;
 }
 
 export interface Negotiation {
