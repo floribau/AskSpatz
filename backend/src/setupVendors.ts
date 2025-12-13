@@ -14,7 +14,7 @@ interface Document {
   [key: string]: any;
 }
 
-async function handle_vendor(vendor: Vendor): Promise<void> {
+async function handleVendor(vendor: Vendor): Promise<void> {
   console.log(`[handle_vendor] Processing vendor: ${vendor.name} (ID: ${vendor.id})`);
   
   try {
@@ -44,7 +44,7 @@ async function handle_vendor(vendor: Vendor): Promise<void> {
     console.log(`[setup] Vendor ${vendor.name} has ${vendor.documents.length} documents`);
     
     for (const document of vendor.documents) {
-      read_document(document);
+      readDocument(document);
     }
   } else {
     console.log(`[setup] Vendor ${vendor.name} has no documents`);
@@ -54,7 +54,7 @@ async function handle_vendor(vendor: Vendor): Promise<void> {
 /**
  * Dummy function to read a document
  */
-function read_document(document: Document): void {
+function readDocument(document: Document): void {
   console.log(`[read_document] Processing document:`, document);
   // Dummy implementation - replace with actual document reading logic
 }
@@ -80,7 +80,7 @@ async function setup(): Promise<void> {
     
     // Process each vendor (update if id matches, insert if new)
     for (const vendor of vendors) {
-      await handle_vendor(vendor);
+      await handleVendor(vendor);
     }
     
     console.log("[setup] Setup completed successfully");
@@ -90,6 +90,6 @@ async function setup(): Promise<void> {
   }
 }
 
-export { setup, read_document };
+export { setup, readDocument as read_document };
 export default setup;
 

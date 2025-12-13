@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
-import setup_vendors from "./setup_vendors.js";
+import setup_vendors from "./setupVendors.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
