@@ -316,30 +316,37 @@ class Agent {
       })
       .join("\n\n");
 
+    // Analyze the current behavior to understand its style and length
+    const currentLength = currentBehaviour.length;
+    const currentWordCount = currentBehaviour.split(/\s+/).length;
+    
     // Use the agent's LLM to analyze and refine the behavior description
-    const analysisPrompt = `You are analyzing a negotiation conversation to refine a vendor's behavior description.
+    const analysisPrompt = `You are analyzing a negotiation conversation to make INCREMENTAL, CONSERVATIVE refinements to a vendor's behavior description.
 
-Current behavior description:
+CRITICAL REQUIREMENTS:
+1. The refined description must be approximately the SAME LENGTH as the current description (target: ${currentWordCount} words, current length: ${currentLength} characters)
+2. The refined description must match the SAME STYLE and TONE as the current description
+3. Make only INCREMENTAL improvements - do NOT make dramatic changes based on single observations
+4. The current description is the FOUNDATION - preserve most of it and only refine specific aspects
+5. Single outliers or unusual responses should NOT cause major changes
+6. Only incorporate patterns that are CONSISTENT throughout the negotiation
+
+Current behavior description (PRESERVE THIS STYLE AND LENGTH):
 ${currentBehaviour}
 
 Full negotiation conversation:
 ${conversationSummary}
 
-Based on this negotiation, analyze the vendor's:
-1. Communication style and tone
-2. Negotiation tactics and approach
-3. Response patterns and timing
-4. Flexibility and willingness to compromise
-5. Key personality traits revealed during negotiation
-
-Generate an UPDATED and REFINED behavior description that:
-- Incorporates insights from this negotiation
-- Maintains useful information from the original description
-- Is more accurate and detailed based on actual observed behavior
-- Is written in a clear, actionable format for future negotiations
+INSTRUCTIONS:
+- Start with the current behavior description as your base
+- Make SMALL, INCREMENTAL refinements based on consistent patterns observed
+- If you notice something new that contradicts the current description, only include it if it appears MULTIPLE times in the conversation
+- Preserve the writing style, tone, and structure of the current description
+- Keep the length approximately the same (${currentWordCount} words ± 20%)
+- Focus on subtle improvements, not rewrites
 
 Return ONLY the refined behavior description, without any additional commentary or explanation.
-<Refined behaviour description>:`;
+Refined behaviour description:`;
 
     // Use initChatModel to get a chat model for analysis
     const analysisModel = await initChatModel("claude-haiku-4-5-20251001");
