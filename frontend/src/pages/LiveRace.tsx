@@ -76,6 +76,9 @@ export function LiveRace() {
         };
         
         if (isMounted) {
+          console.log("[LiveRace] Vendors:", data.vendors?.map((v: any) => ({ id: v.id, name: v.name })));
+          console.log("[LiveRace] Messages vendor_ids:", data.messages?.map((m: any) => m.vendor_id));
+          
           setNegotiation(negotiationDetail);
           setAllMessages(data.messages || []);
           setOffers(data.offers || []);
@@ -142,6 +145,10 @@ export function LiveRace() {
     );
   }
 
+  // Get latest price round for calculations
+  const latestRound =
+    negotiation.priceHistory[negotiation.priceHistory.length - 1];
+
   const handleSendMessage = (message: string) => {
     const newMessage: Message = {
       sender: "human",
@@ -172,20 +179,20 @@ export function LiveRace() {
     setShowIntervention(true);
   };
 
-  // Find best price across all price history rounds
-  let lowestPrice = Infinity;
+  // Find best price
+  let lowestPrice = negotiation.startingPrice;
   let winningVendor = "";
-  
-  // Look through all rounds to find the absolute lowest price
-  negotiation.priceHistory.forEach((round) => {
-    negotiation.vendors.forEach((vendor) => {
-      const price = round[vendor.id] as number | undefined;
-      if (price && price < lowestPrice) {
-        lowestPrice = price;
-        winningVendor = vendor.company;
-      }
-    });
+  negotiation.vendors.forEach((vendor) => {
+    const price = latestRound?.[vendor.id] as number | undefined;
+    if (price && price < lowestPrice) {
+      lowestPrice = price;
+      winningVendor = vendor.company;
+    }
   });
+  const savingsPercent = (
+    ((negotiation.startingPrice - lowestPrice) / negotiation.startingPrice) *
+    100
+  ).toFixed(1);
 
   return (
     <div className="min-h-screen bg-background">
@@ -215,19 +222,7 @@ export function LiveRace() {
               {negotiation.productName}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="text-2xl"
-            >
-              <Link to={`/negotiation/${id}/betting`}>
-                🤫
-              </Link>
-            </Button>
-            <StatusBadge status={negotiation.status} />
-          </div>
+          <StatusBadge status={negotiation.status} />
         </div>
 
         {/* Current Best Price Banner */}
@@ -238,32 +233,30 @@ export function LiveRace() {
                 <p className="text-sm text-muted-foreground mb-1">
                   Current Best Price
                 </p>
-                {lowestPrice > 0 && lowestPrice !== Infinity ? (
-                  <>
-                    <p className="text-4xl font-bold text-success">
-                      {formatCurrency(lowestPrice)}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {winningVendor}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-2xl font-semibold text-muted-foreground">
-                    Awaiting offers...
-                  </p>
-                )}
+                <p className="text-4xl font-bold text-success">
+                  {formatCurrency(lowestPrice)}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {winningVendor} - {savingsPercent}% savings
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-6 text-center">
+              <div className="grid grid-cols-3 gap-6 text-center">
+                <div>
+                  <p className="text-xs text-muted-foreground">Starting</p>
+                  <p className="text-lg font-semibold">
+                    {formatCurrency(negotiation.startingPrice)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Target</p>
+                  <p className="text-lg font-semibold text-primary">
+                    {formatCurrency(negotiation.targetPrice)}
+                  </p>
+                </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Vendors</p>
                   <p className="text-lg font-semibold">
                     {negotiation.vendors.length}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Finished</p>
-                  <p className="text-lg font-semibold text-success">
-                    {new Set(offers.map(o => o.vendor_id)).size} / {negotiation.vendors.length}
                   </p>
                 </div>
               </div>
@@ -278,7 +271,6 @@ export function LiveRace() {
             vendors={negotiation.vendors}
             selectedVendorId={selectedVendorId}
             onVendorClick={setSelectedVendorId}
-            finishedVendorIds={offers.map(o => String(o.vendor_id))}
           />
           <CommunicationLog 
             messages={

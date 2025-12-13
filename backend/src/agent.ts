@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { initChatModel, HumanMessage, SystemMessage } from "langchain";
 import systemPrompt from "./prompt.js";
 import { supabase } from "./supabase.js";
+import { langfuseHandler } from "./langfuse.js";
 
 dotenv.config();
 
@@ -457,6 +458,7 @@ class Agent {
       },
       {
         recursionLimit: 100,
+        callbacks: [langfuseHandler],
       }
     );
 
