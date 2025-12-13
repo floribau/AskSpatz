@@ -127,17 +127,49 @@ class Agent {
             }
           }
 
-          // Update negotiation_group status to 'finished'
+          // Check if all negotiations in the group are finished before updating group status
           if (this.negotiation_group_id) {
-            const { error: groupError } = await supabase
-              .from("negotiation_group")
-              .update({ status: "finished" })
-              .eq("id", this.negotiation_group_id);
+            // Get all negotiations in this group
+            const { data: negotiations, error: negError } = await supabase
+              .from("negotiation")
+              .select("id")
+              .eq("negotiation_group_id", this.negotiation_group_id);
 
-            if (groupError) {
-              console.error("[finishNegotiation] Failed to update group status:", groupError.message);
-            } else {
-              console.log(`[finishNegotiation] Updated negotiation group ${this.negotiation_group_id} status to 'finished'`);
+            if (negError) {
+              console.error("[finishNegotiation] Failed to fetch negotiations:", negError.message);
+            } else if (negotiations && negotiations.length > 0) {
+              const negotiationIds = negotiations.map(n => n.id);
+              
+              // Count how many negotiations have offers
+              const { data: offersData, error: offersError } = await supabase
+                .from("offer")
+                .select("negotiation_id")
+                .in("negotiation_id", negotiationIds);
+
+              if (offersError) {
+                console.error("[finishNegotiation] Failed to fetch offers:", offersError.message);
+              } else {
+                // Get unique negotiation IDs that have offers
+                const negotiationsWithOffers = new Set(offersData?.map(o => o.negotiation_id) || []);
+                
+                console.log(`[finishNegotiation] Negotiations in group: ${negotiations.length}, with offers: ${negotiationsWithOffers.size}`);
+                
+                // Only update group status if ALL negotiations have offers
+                if (negotiationsWithOffers.size >= negotiations.length) {
+                  const { error: groupError } = await supabase
+                    .from("negotiation_group")
+                    .update({ status: "finished" })
+                    .eq("id", this.negotiation_group_id);
+
+                  if (groupError) {
+                    console.error("[finishNegotiation] Failed to update group status:", groupError.message);
+                  } else {
+                    console.log(`[finishNegotiation] All negotiations complete! Updated negotiation group ${this.negotiation_group_id} status to 'finished'`);
+                  }
+                } else {
+                  console.log(`[finishNegotiation] Waiting for other negotiations to complete (${negotiationsWithOffers.size}/${negotiations.length})`);
+                }
+              }
             }
           }
         }
@@ -210,7 +242,7 @@ class Agent {
     // Look up the vendor details from our database
     const { data: vendorData, error: vendorError } = await supabase
       .from("vendors")
-      .select("id, name, external_vendor_id, behaviour")
+      .select("id, name, behaviour")
       .eq("id", this.vendor_id)
       .single();
 
@@ -222,9 +254,13 @@ class Agent {
         name: vendorData.name,
         behaviour: vendorData.behaviour,
       };
+      console.log(`[Agent] Vendor info set:`, this.vendorInfo);
+    } else {
+      console.error(`[Agent] No vendor data found for ID ${this.vendor_id}`);
     }
 
-    const externalVendorId = vendorData?.external_vendor_id || 8; // Default to 8 if not found
+    // The vendor ID in our database IS the external vendor ID (synced from external API)
+    const externalVendorId = vendorData?.id || this.vendor_id;
     console.log(`[Agent] Using external_vendor_id: ${externalVendorId}`);
 
     // Create a new conversation with the external API
