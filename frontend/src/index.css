@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 235 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 235 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 235 25% 15%;
+
+    --primary: 235 76% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 207 90% 61%;
+    --secondary-foreground: 235 25% 15%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 220 14% 96%;
+    --accent-foreground: 235 25% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 235 76% 30%;
+
+    --radius: 0.5rem;
+
+    --chart-1: 235 76% 30%;
+    --chart-2: 207 90% 61%;
+    --chart-3: 142 71% 45%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 84% 60%;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+
+  .dark {
+    --background: 235 25% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 235 20% 13%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 235 20% 13%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 207 90% 61%;
+    --primary-foreground: 235 25% 10%;
+
+    --secondary: 235 20% 20%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 235 15% 18%;
+    --muted-foreground: 220 9% 60%;
+
+    --accent: 235 15% 18%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 235 15% 22%;
+    --input: 235 15% 22%;
+    --ring: 207 90% 61%;
+
+    --chart-1: 207 90% 61%;
+    --chart-2: 235 76% 50%;
+    --chart-3: 142 71% 45%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 72% 51%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
