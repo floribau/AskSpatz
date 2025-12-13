@@ -1,7 +1,3 @@
-import agent from "./agent.js";
+import run_agent from "./agent.js";
 
-console.log(
-    await agent.invoke({
-      messages: [{ role: "user", content: "Write an welcome email." }],
-    })
-  );
+run_agent();
