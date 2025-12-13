@@ -49,11 +49,11 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
                         className={cn(
                           "p-3 rounded-lg",
                           message.sender === "agent" &&
-                            "bg-blue-500/20 border border-blue-500/30",
+                            "bg-sky-300/20 border border-sky-300/30",
                           message.sender === "vendor" &&
                             "bg-stone-800/80 border border-stone-700/50",
                           message.sender === "human" &&
-                            "bg-purple-500/20 border border-purple-500/30 ml-8"
+                            "bg-violet-300/20 border border-violet-300/30 ml-8"
                         )}
                       >
                         <div className="flex items-center justify-between mb-2">

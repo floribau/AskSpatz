@@ -25,7 +25,7 @@ export interface Product {
   vendor_ids: number[];
 }
 
-export type NegotiationGroupStatus = "running" | "finished";
+export type NegotiationGroupStatus = "running" | "finished" | "accepted";
 
 export interface NegotiationGroup {
   id: number;

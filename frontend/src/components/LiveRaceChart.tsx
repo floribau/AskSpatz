@@ -52,10 +52,10 @@ export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }:
           {isActive && (
             <div className="flex items-center gap-2">
               <div className="relative">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75"></div>
+                <div className="w-3 h-3 bg-rose-300 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 w-3 h-3 bg-rose-300 rounded-full animate-ping opacity-75"></div>
               </div>
-              <span className="text-xs text-red-400 font-medium">Live</span>
+              <span className="text-xs text-rose-200 font-medium">Live</span>
             </div>
           )}
         </CardTitle>
@@ -117,12 +117,12 @@ export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }:
               {lowestPrice < Infinity && (
                 <ReferenceLine
                   y={lowestPrice}
-                  stroke="#34D399"
+                  stroke="#6EE7B7"
                   strokeDasharray="5 5"
                   label={{
                     value: `Best: ${formatCurrency(lowestPrice)}`,
                     position: "right",
-                    fill: "#34D399",
+                    fill: "#6EE7B7",
                     className: "text-xs",
                   }}
                 />
@@ -142,7 +142,7 @@ export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }:
                 key={vendor.id}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
                   isFinished
-                    ? "bg-green-500/20 ring-2 ring-green-400"
+                    ? "bg-emerald-300/20 ring-2 ring-emerald-300/50"
                     : isWinner
                     ? "bg-stone-700/50 ring-2 ring-stone-500 hover:bg-stone-700/70"
                     : "bg-stone-800/80 hover:bg-stone-800/80"
@@ -158,7 +158,7 @@ export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }:
                     {formatCurrency(currentPrice)}
                   </span>
                 )}
-                {isFinished && <CheckCircle className="h-4 w-4 text-green-400" />}
+                {isFinished && <CheckCircle className="h-4 w-4 text-emerald-300" />}
                 {!isFinished && isWinner && <SpatzIcon size={16} />}
               </div>
             );

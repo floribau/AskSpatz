@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy } from "lucide-react";
-import { Header } from "@/components/Header";
+import { useState, useEffect, useRef } from "react";
+import { useParams, Link } from "react-router-dom";
+import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy, Users } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
@@ -11,6 +10,7 @@ import { InterventionModal } from "@/components/InterventionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { NegotiationDetail, Message } from "@/data/types";
@@ -28,16 +28,19 @@ interface Offer {
 
 export function LiveRace() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [showIntervention, setShowIntervention] = useState(false);
   const [showOffersPanel, setShowOffersPanel] = useState(false);
+  const hasUserSelectedOffer = useRef(false);
   const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [offerLabels, setOfferLabels] = useState<Record<number, string>>({});
   const [isLoadingLabels, setIsLoadingLabels] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [allMessages, setAllMessages] = useState<Message[]>([]);
+  const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
+  const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -60,7 +63,7 @@ export function LiveRace() {
           productName: data.productName || "",
           best_nap: data.startingPrice || 0,
           savings_percent: 0,
-          status: data.status === "running" ? "IN_PROGRESS" : data.status || "IN_PROGRESS",
+          status: data.status === "running" ? "IN_PROGRESS" : data.status === "accepted" ? "ACCEPTED" : data.status === "COMPLETED" ? "COMPLETED" : data.status || "IN_PROGRESS",
           vendors_engaged: data.vendors_engaged || 0,
           created_at: new Date().toISOString(),
           startingPrice: data.startingPrice || 0,
@@ -82,6 +85,13 @@ export function LiveRace() {
           setNegotiation(negotiationDetail);
           setAllMessages(data.messages || []);
           setOffers(data.offers || []);
+          setAcceptedOfferId(data.accepted_offer || null);
+          
+          // Pre-select accepted offer if one exists
+          if (data.accepted_offer) {
+            setSelectedOfferId(data.accepted_offer);
+          }
+          
           setIsLoading(false);
 
           // Stop polling if negotiation is finished
@@ -139,6 +149,32 @@ export function LiveRace() {
       fetchLabels();
     }
   }, [showOffersPanel, offers, offerLabels]);
+
+  // Pre-select recommended offer (Best Value with trophy icon) when labels are loaded and panel opens
+  useEffect(() => {
+    if (
+      showOffersPanel &&
+      !acceptedOfferId &&
+      offers.length > 0 &&
+      Object.keys(offerLabels).length > 0 &&
+      !hasUserSelectedOffer.current
+    ) {
+      // Find the offer with "Best Value" label (the one that shows "Recommended Choice" with trophy icon)
+      const recommendedOffer = offers.find(
+        (offer) => offerLabels[offer.id] === "Best Value"
+      );
+      
+      if (recommendedOffer && selectedOfferId !== recommendedOffer.id) {
+        setSelectedOfferId(recommendedOffer.id);
+      } else if (!recommendedOffer && selectedOfferId === null) {
+        // Fallback to lowest price if no "Best Value" label exists
+        const bestOffer = offers.reduce((best: Offer, current: Offer) => 
+          current.price < best.price ? current : best
+        );
+        setSelectedOfferId(bestOffer.id);
+      }
+    }
+  }, [showOffersPanel, offerLabels, offers, acceptedOfferId, selectedOfferId]);
 
   if (isLoading) {
     return (
@@ -302,69 +338,77 @@ export function LiveRace() {
       <main className="w-full px-4 md:px-6 py-8 relative z-10">
 
         {/* Title */}
-        <div className="flex flex-col items-center gap-4 mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white">
-            {negotiation.productName || negotiation.title}
-          </h1>
-          <StatusBadge status={negotiation.status} />
+        <div className="flex flex-col items-center gap-4 mb-6 text-center">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-white">
+              {negotiation.productName || negotiation.title}
+            </h1>
+            <StatusBadge status={negotiation.status} />
+          </div>
         </div>
-
-        {/* Current Best Price Banner */}
-        <Card className="mb-8 bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
-          <CardContent className="py-6">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div>
-                <p className="text-sm text-white/70 mb-1">
-                  Current Best Price
-                </p>
-                {lowestPrice < Infinity ? (
-                  <>
-                    <p className="text-4xl font-bold text-green-400">
-                      {formatCurrency(lowestPrice)}
-                    </p>
-                    <p className="text-sm text-white/70 mt-1">
-                      {winningVendor}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-2xl font-bold text-white/60">
-                    Awaiting offers...
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="grid grid-cols-2 gap-6 text-center">
-                  <div>
-                    <p className="text-xs text-white/70">Vendors</p>
-                    <p className="text-lg font-semibold text-white">
-                      {negotiation.vendors.length}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-white/70">Finished</p>
-                    <p className="text-lg font-semibold text-green-400">
-                      {finishedAgentsCount} / {negotiation.vendors.length}
-                    </p>
-                  </div>
-                </div>
-                {/* Show "View All Offers" button when negotiation is complete */}
-                {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
-                  <Button 
-                    onClick={() => setShowOffersPanel(true)}
-                    variant="success"
-                    className="gap-2"
-                  >
-                    <Trophy className="h-4 w-4" />
-                    View All Offers
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Main Content */}
         <div className="space-y-6 mb-8">
+          {/* Small detail boxes above the chart */}
+          <div className="flex items-center justify-center gap-3">
+            {/* Best Price - Small box */}
+            <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-300" />
+                <div>
+                  <p className="text-[10px] text-white/70 leading-tight">Best Price</p>
+                  {lowestPrice < Infinity ? (
+                    <p className="text-sm font-bold text-emerald-300 leading-tight">
+                      {formatCurrency(lowestPrice)}
+                    </p>
+                  ) : (
+                    <p className="text-xs font-bold text-white/60 leading-tight">
+                      Awaiting...
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            {/* Vendors - Small box */}
+            <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-white/70" />
+                <div>
+                  <p className="text-[10px] text-white/70 leading-tight">Vendors</p>
+                  <p className="text-sm font-semibold text-white leading-tight">
+                    {negotiation.vendors.length}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Finished - Small box */}
+            <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-300" />
+                <div>
+                  <p className="text-[10px] text-white/70 leading-tight">Finished</p>
+                  <p className="text-sm font-semibold text-emerald-300 leading-tight">
+                    {finishedAgentsCount}/{negotiation.vendors.length}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* View All Offers button - Small */}
+            {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
+              <Button 
+                onClick={() => setShowOffersPanel(true)}
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-xs bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
+              >
+                <Trophy className="h-3 w-3" />
+                View Offers
+              </Button>
+            )}
+          </div>
+
           <LiveRaceChart
             priceHistory={negotiation.priceHistory}
             vendors={negotiation.vendors}
@@ -379,7 +423,7 @@ export function LiveRace() {
           <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
-                <DollarSign className="h-5 w-5 text-green-400" />
+                <DollarSign className="h-5 w-5 text-emerald-300" />
                 Extracted Offers ({offers.length})
               </CardTitle>
             </CardHeader>
@@ -405,12 +449,12 @@ export function LiveRace() {
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-success mb-1">Pros</p>
+                                <p className="text-xs font-semibold text-emerald-300 mb-1">Pros</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.pros.map((pro, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-success">+</span>
-                                      <span>{pro}</span>
+                                      <span className="text-emerald-300">+</span>
+                                      <span className="text-white/80">{pro}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -418,12 +462,12 @@ export function LiveRace() {
                             )}
                             {offer.cons && offer.cons.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-destructive mb-1">Cons</p>
+                                <p className="text-xs font-semibold text-rose-300 mb-1">Cons</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.cons.map((con, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-destructive">−</span>
-                                      <span>{con}</span>
+                                      <span className="text-rose-300">−</span>
+                                      <span className="text-white/80">{con}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -432,7 +476,7 @@ export function LiveRace() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-2xl font-bold text-green-400">
+                          <p className="text-2xl font-bold text-emerald-300">
                             {formatCurrency(offer.price)}
                           </p>
                         </div>
@@ -447,9 +491,9 @@ export function LiveRace() {
 
         {/* Human Intervention Section (for REVIEW_REQUIRED) */}
         {negotiation.status === "REVIEW_REQUIRED" && (
-          <Card className="mt-8 bg-stone-900/80 backdrop-blur-md border-yellow-500/50 shadow-lg">
+          <Card className="mt-8 bg-stone-900/80 backdrop-blur-md border-amber-300/50 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-yellow-400 text-center">
+              <CardTitle className="text-amber-200 text-center">
                 Human Intervention Recommended
               </CardTitle>
             </CardHeader>
@@ -504,17 +548,17 @@ export function LiveRace() {
 
         {/* Offers Panel (Slide-out from right) */}
         <Sheet open={showOffersPanel} onOpenChange={setShowOffersPanel}>
-          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto bg-stone-900 border-stone-700">
             <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-success" />
+              <SheetTitle className="flex items-center gap-2 text-white">
+                <Trophy className="h-5 w-5 text-emerald-300" />
                 All Offers ({offers.length})
               </SheetTitle>
             </SheetHeader>
             {(isLoadingLabels || Object.keys(offerLabels).length === 0) ? (
               <div className="flex flex-col items-center justify-center py-16">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                <p className="text-sm text-muted-foreground">Analyzing offers...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-300 mb-4"></div>
+                <p className="text-sm text-white/70">Analyzing offers...</p>
               </div>
             ) : (
             <div className="mt-6 space-y-4">
@@ -531,50 +575,70 @@ export function LiveRace() {
                 .map((offer) => {
                   const label = offerLabels[offer.id];
                   const isBestValue = label === "Best Value";
+                  const isSelected = selectedOfferId === offer.id;
+                  const isAccepted = acceptedOfferId === offer.id;
+                  const isClickable = !acceptedOfferId;
+                  
                   return (
                     <div
                       key={offer.id}
+                      onClick={() => {
+                        if (isClickable) {
+                          setSelectedOfferId(offer.id);
+                          hasUserSelectedOffer.current = true; // Mark that user has manually selected
+                        }
+                      }}
                       className={`p-4 border rounded-lg transition-all ${
-                        isBestValue 
-                          ? "bg-primary/10 border-primary ring-2 ring-primary/50 shadow-lg" 
-                          : "bg-muted/30"
+                        isAccepted
+                          ? "bg-emerald-300/20 border-emerald-300 ring-2 ring-emerald-300/50 shadow-lg cursor-default"
+                          : isSelected
+                          ? "bg-sky-300/10 border-sky-300 ring-2 ring-sky-300/50 shadow-lg cursor-pointer hover:bg-sky-300/15"
+                          : isClickable
+                          ? "bg-stone-800/50 cursor-pointer hover:bg-stone-800/70 border-stone-700"
+                          : "bg-stone-800/50 cursor-default border-stone-700"
                       }`}
                     >
-                      {isBestValue && (
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-primary/30">
-                          <Trophy className="h-5 w-5 text-primary" />
-                          <span className="text-sm font-semibold text-primary">Recommended Choice</span>
+                      {isAccepted && (
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-emerald-300/30">
+                          <CheckCircle className="h-5 w-5 text-emerald-300" />
+                          <span className="text-sm font-semibold text-emerald-300">Accepted Offer</span>
+                        </div>
+                      )}
+                      {!isAccepted && isBestValue && (
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-sky-300/30">
+                          <Trophy className="h-5 w-5 text-sky-300" />
+                          <span className="text-sm font-semibold text-sky-300">Recommended Choice</span>
                         </div>
                       )}
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <p className={`text-sm font-medium ${isBestValue ? "text-primary" : ""}`}>
+                            <p className={`text-sm font-medium ${isBestValue ? "text-sky-300" : "text-white"}`}>
                               {offer.vendor_name}
                             </p>
                             {label && (
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 isBestValue 
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-secondary text-secondary-foreground"
+                                  ? "bg-sky-300/20 text-sky-300 border border-sky-300/50"
+                                  : "bg-stone-700/50 text-white/70 border border-stone-600/50"
                               }`}>
                                 {label}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground break-words">
+                          <p className="text-sm text-white/70 break-words">
                             {offer.description}
                           </p>
                           {/* Pros and Cons */}
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-success mb-1">Pros</p>
+                                <p className="text-xs font-semibold text-emerald-300 mb-1">Pros</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.pros.map((pro, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-success">+</span>
-                                      <span>{pro}</span>
+                                      <span className="text-emerald-300">+</span>
+                                      <span className="text-white/80">{pro}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -582,12 +646,12 @@ export function LiveRace() {
                             )}
                             {offer.cons && offer.cons.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-destructive mb-1">Cons</p>
+                                <p className="text-xs font-semibold text-rose-300 mb-1">Cons</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.cons.map((con, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-destructive">−</span>
-                                      <span>{con}</span>
+                                      <span className="text-rose-300">−</span>
+                                      <span className="text-white/80">{con}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -596,7 +660,7 @@ export function LiveRace() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className={`text-2xl font-bold ${isBestValue ? "text-primary" : ""}`}>
+                          <p className={`text-2xl font-bold ${isBestValue ? "text-sky-300" : "text-white"}`}>
                             {formatCurrency(offer.price)}
                           </p>
                         </div>
@@ -606,8 +670,89 @@ export function LiveRace() {
                 })}
             </div>
             )}
+            
+            {/* Accept Offer Button - only show when no offer is accepted */}
+            {!acceptedOfferId && selectedOfferId && offers.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-stone-700">
+                <Button
+                  onClick={() => setShowAcceptConfirm(true)}
+                  className="w-full bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
+                  size="lg"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Accept Offer
+                </Button>
+              </div>
+            )}
           </SheetContent>
         </Sheet>
+        
+        {/* Confirmation Dialog */}
+        <Dialog open={showAcceptConfirm} onOpenChange={setShowAcceptConfirm}>
+          <DialogContent className="bg-stone-900 border-stone-700 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-white">Accept Offer</DialogTitle>
+              <DialogDescription className="text-white/70">
+                Are you sure you want to accept this offer? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedOfferId && (() => {
+              const selectedOffer = offers.find(o => o.id === selectedOfferId);
+              return selectedOffer ? (
+                <div className="py-4">
+                  <p className="font-medium mb-2 text-white">{selectedOffer.vendor_name}</p>
+                  <p className="text-2xl font-bold text-emerald-300 mb-2">
+                    {formatCurrency(selectedOffer.price)}
+                  </p>
+                  <p className="text-sm text-white/70">{selectedOffer.description}</p>
+                </div>
+              ) : null;
+            })()}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAcceptConfirm(false)} className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-800/50">
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!selectedOfferId || !id) return;
+                  
+                  try {
+                    const response = await fetch(`http://localhost:3001/api/negotiation-groups/${id}/accept-offer`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ offerId: selectedOfferId }),
+                    });
+                    
+                    if (!response.ok) {
+                      throw new Error("Failed to accept offer");
+                    }
+                    
+                    const data = await response.json();
+                    setAcceptedOfferId(selectedOfferId);
+                    setShowAcceptConfirm(false);
+                    setShowOffersPanel(false);
+                    
+                    toast({
+                      title: "Offer Accepted",
+                      description: `Successfully accepted offer from ${data.vendor_name}`,
+                      variant: "success",
+                    });
+                  } catch (error) {
+                    console.error("Error accepting offer:", error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to accept offer. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
+              >
+                Confirm
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
