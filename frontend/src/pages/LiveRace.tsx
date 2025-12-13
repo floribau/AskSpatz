@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign } from "lucide-react";
+import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
@@ -10,6 +10,7 @@ import { SuggestionCard } from "@/components/SuggestionCard";
 import { InterventionModal } from "@/components/InterventionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { NegotiationDetail, Message } from "@/data/types";
@@ -21,6 +22,8 @@ interface Offer {
   vendor_name: string;
   description: string;
   price: number;
+  pros: string[] | null;
+  cons: string[] | null;
 }
 
 export function LiveRace() {
@@ -28,8 +31,11 @@ export function LiveRace() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showIntervention, setShowIntervention] = useState(false);
+  const [showOffersPanel, setShowOffersPanel] = useState(false);
   const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [offerLabels, setOfferLabels] = useState<Record<number, string>>({});
+  const [isLoadingLabels, setIsLoadingLabels] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [allMessages, setAllMessages] = useState<Message[]>([]);
@@ -119,6 +125,32 @@ export function LiveRace() {
       }
     };
   }, [id]);
+
+  // Fetch offer labels when panel is opened (must be before early returns)
+  useEffect(() => {
+    if (showOffersPanel && offers.length > 0 && Object.keys(offerLabels).length === 0) {
+      const fetchLabels = async () => {
+        setIsLoadingLabels(true);
+        try {
+          const response = await fetch("http://localhost:3001/api/offers/labels", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ offers }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setOfferLabels(data.labels || {});
+          }
+        } catch (error) {
+          console.error("Error fetching offer labels:", error);
+        } finally {
+          setIsLoadingLabels(false);
+        }
+      };
+      fetchLabels();
+    }
+  }, [showOffersPanel, offers, offerLabels]);
 
   if (isLoading) {
     return (
@@ -245,19 +277,32 @@ export function LiveRace() {
                   </p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-6 text-center">
-                <div>
-                  <p className="text-xs text-muted-foreground">Vendors</p>
-                  <p className="text-lg font-semibold">
-                    {negotiation.vendors.length}
-                  </p>
+              <div className="flex items-center gap-6">
+                <div className="grid grid-cols-2 gap-6 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Vendors</p>
+                    <p className="text-lg font-semibold">
+                      {negotiation.vendors.length}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Finished</p>
+                    <p className="text-lg font-semibold text-success">
+                      {finishedAgentsCount} / {negotiation.vendors.length}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Finished</p>
-                  <p className="text-lg font-semibold text-success">
-                    {finishedAgentsCount} / {negotiation.vendors.length}
-                  </p>
-                </div>
+                {/* Show "View All Offers" button when negotiation is complete */}
+                {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
+                  <Button 
+                    onClick={() => setShowOffersPanel(true)}
+                    variant="success"
+                    className="gap-2"
+                  >
+                    <Trophy className="h-4 w-4" />
+                    View All Offers
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -306,6 +351,35 @@ export function LiveRace() {
                             {offer.vendor_name}
                           </p>
                           <p className="text-sm break-words">{offer.description}</p>
+                          {/* Pros and Cons */}
+                          <div className="grid grid-cols-2 gap-4 mt-3">
+                            {offer.pros && offer.pros.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-success mb-1">Pros</p>
+                                <ul className="text-xs space-y-0.5">
+                                  {offer.pros.map((pro, idx) => (
+                                    <li key={idx} className="flex items-start gap-1">
+                                      <span className="text-success">+</span>
+                                      <span>{pro}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {offer.cons && offer.cons.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-destructive mb-1">Cons</p>
+                                <ul className="text-xs space-y-0.5">
+                                  {offer.cons.map((con, idx) => (
+                                    <li key={idx} className="flex items-start gap-1">
+                                      <span className="text-destructive">−</span>
+                                      <span>{con}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-2xl font-bold text-success">
@@ -377,6 +451,113 @@ export function LiveRace() {
           negotiation={negotiation}
           onSendMessage={handleSendMessage}
         />
+
+        {/* Offers Panel (Slide-out from right) */}
+        <Sheet open={showOffersPanel} onOpenChange={setShowOffersPanel}>
+          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-success" />
+                All Offers ({offers.length})
+              </SheetTitle>
+            </SheetHeader>
+            {(isLoadingLabels || Object.keys(offerLabels).length === 0) ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                <p className="text-sm text-muted-foreground">Analyzing offers...</p>
+              </div>
+            ) : (
+            <div className="mt-6 space-y-4">
+              {offers
+                .sort((a, b) => {
+                  // Best Value always on top
+                  const aIsBestValue = offerLabels[a.id] === "Best Value";
+                  const bIsBestValue = offerLabels[b.id] === "Best Value";
+                  if (aIsBestValue && !bIsBestValue) return -1;
+                  if (!aIsBestValue && bIsBestValue) return 1;
+                  // Then sort by price
+                  return a.price - b.price;
+                })
+                .map((offer) => {
+                  const label = offerLabels[offer.id];
+                  const isBestValue = label === "Best Value";
+                  return (
+                    <div
+                      key={offer.id}
+                      className={`p-4 border rounded-lg transition-all ${
+                        isBestValue 
+                          ? "bg-primary/10 border-primary ring-2 ring-primary/50 shadow-lg" 
+                          : "bg-muted/30"
+                      }`}
+                    >
+                      {isBestValue && (
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-primary/30">
+                          <Trophy className="h-5 w-5 text-primary" />
+                          <span className="text-sm font-semibold text-primary">Recommended Choice</span>
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className={`text-sm font-medium ${isBestValue ? "text-primary" : ""}`}>
+                              {offer.vendor_name}
+                            </p>
+                            {label && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                isBestValue 
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-secondary text-secondary-foreground"
+                              }`}>
+                                {label}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground break-words">
+                            {offer.description}
+                          </p>
+                          {/* Pros and Cons */}
+                          <div className="grid grid-cols-2 gap-4 mt-3">
+                            {offer.pros && offer.pros.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-success mb-1">Pros</p>
+                                <ul className="text-xs space-y-0.5">
+                                  {offer.pros.map((pro, idx) => (
+                                    <li key={idx} className="flex items-start gap-1">
+                                      <span className="text-success">+</span>
+                                      <span>{pro}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {offer.cons && offer.cons.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-destructive mb-1">Cons</p>
+                                <ul className="text-xs space-y-0.5">
+                                  {offer.cons.map((con, idx) => (
+                                    <li key={idx} className="flex items-start gap-1">
+                                      <span className="text-destructive">−</span>
+                                      <span>{con}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className={`text-2xl font-bold ${isBestValue ? "text-primary" : ""}`}>
+                            {formatCurrency(offer.price)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </main>
     </div>
   );

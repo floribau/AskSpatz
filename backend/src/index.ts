@@ -1,20 +1,11 @@
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
 import setup_vendors from "./setupVendors.js";
-import { CallbackHandler } from "@langfuse/langchain";
-import { NodeSDK } from "@opentelemetry/sdk-node";
-import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { initChatModel, HumanMessage, SystemMessage } from "langchain";
  
-const sdk = new NodeSDK({
-  spanProcessors: [new LangfuseSpanProcessor()],
-});
- 
-sdk.start();
-// Initialize the Langfuse CallbackHandler
-const langfuseHandler = new CallbackHandler();
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -321,6 +312,8 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
         vendor_name: vendor?.name || "Unknown Vendor",
         description: offer.description,
         price: offer.price,
+        pros: offer.pros,
+        cons: offer.cons,
       };
     });
 
@@ -433,6 +426,59 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
   } catch (err) {
     console.error("[API] Error fetching negotiation group details:", err);
     res.status(500).json({ error: "Failed to fetch negotiation group details" });
+  }
+});
+
+app.post("/api/offers/labels", async (req, res) => {
+  try {
+    const { offers } = req.body;
+    
+    if (!offers || !Array.isArray(offers) || offers.length === 0) {
+      return res.status(400).json({ error: "Offers array is required" });
+    }
+
+    const model = await initChatModel("claude-sonnet-4-5");
+    
+    // Format offers for the prompt
+    const offersDescription = offers.map((offer: any) => 
+      `ID: ${offer.id}, Vendor: ${offer.vendor_name}, Price: $${offer.price}, Description: ${offer.description}, Pros: ${offer.pros?.join(", ") || "N/A"}, Cons: ${offer.cons?.join(", ") || "N/A"}`
+    ).join("\n");
+
+    const messages = [
+      new SystemMessage(`You analyze procurement offers and assign creative labels. Respond with ONLY valid JSON, no markdown or explanation.`),
+      new HumanMessage(`Analyze these procurement offers and assign exactly 3 labels. One offer MUST get "Best Value". The other 2 labels should be creative and relevant (e.g., "Budget Pick", "Premium Choice", "Most Flexible", "Best Terms", etc.).
+
+Each label goes to a DIFFERENT offer. If fewer than 3 offers, only assign labels to existing offers.
+
+Offers:
+${offersDescription}
+
+Respond with ONLY a valid JSON array:
+[{"offer_id": <id>, "label": "<label>"}]`)
+    ];
+    
+    const response = await model.invoke(messages);
+    
+    // Parse the JSON response from the model
+    const responseText = typeof response.content === 'string' 
+      ? response.content 
+      : JSON.stringify(response.content);
+    
+    // Clean up any markdown formatting if present
+    const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    const labelsJson = JSON.parse(cleanedResponse);
+    
+    // Convert to a map of offer_id -> label
+    const labelsMap: Record<number, string> = {};
+    labelsJson.forEach((item: { offer_id: number; label: string }) => {
+      labelsMap[item.offer_id] = item.label;
+    });
+
+    console.log("[API] Generated offer labels:", labelsMap);
+    res.json({ labels: labelsMap });
+  } catch (err) {
+    console.error("[API] Error generating offer labels:", err);
+    res.status(500).json({ error: "Failed to generate offer labels" });
   }
 });
 
