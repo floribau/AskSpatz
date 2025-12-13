@@ -1,4 +1,4 @@
-import { Bot } from "lucide-react";
+import { Bird } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SpatzIconProps {
@@ -15,7 +15,7 @@ export function SpatzIcon({ size = 32, className = "" }: SpatzIconProps) {
       )}
       style={{ width: size, height: size }}
     >
-      <Bot size={size * 0.6} />
+      <Bird size={size * 0.6} />
     </div>
   );
 }
