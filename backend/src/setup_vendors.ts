@@ -20,10 +20,12 @@ async function handle_vendor(vendor: Vendor): Promise<void> {
   try {
     const { data, error } = await supabase
       .from("vendors")
-      .insert({
+      .upsert({
         id: vendor.id,
         name: vendor.name,
         behaviour: vendor.description,
+      }, {
+        onConflict: "id"
       })
       .select();
 
@@ -35,6 +37,17 @@ async function handle_vendor(vendor: Vendor): Promise<void> {
   } catch (error) {
     console.error(`[handle_vendor] Error writing vendor ${vendor.name} to Supabase:`, error);
     throw error;
+  }
+
+  // Process each document for this vendor
+  if (vendor.documents && Array.isArray(vendor.documents)) {
+    console.log(`[setup] Vendor ${vendor.name} has ${vendor.documents.length} documents`);
+    
+    for (const document of vendor.documents) {
+      read_document(document);
+    }
+  } else {
+    console.log(`[setup] Vendor ${vendor.name} has no documents`);
   }
 }
 
@@ -65,34 +78,9 @@ async function setup(): Promise<void> {
     const vendors: Vendor[] = await response.json();
     console.log(`[setup] Fetched ${vendors.length} vendors`);
     
-    // Delete all existing vendors to overwrite the table
-    console.log("[setup] Deleting all existing vendors...");
-    const { error: deleteError } = await supabase
-      .from("vendors")
-      .delete()
-      .gte("id", 0); // Delete all rows (this condition matches all rows since id >= 0)
-    
-    if (deleteError) {
-      throw new Error(`Failed to delete existing vendors: ${deleteError.message}`);
-    }
-    console.log("[setup] Successfully deleted all existing vendors");
-    
-    // Insert all new vendors
-    console.log("[setup] Inserting new vendors...");
-    // Process each vendor
+    // Process each vendor (update if id matches, insert if new)
     for (const vendor of vendors) {
       await handle_vendor(vendor);
-      
-      // Process each document for this vendor
-      if (vendor.documents && Array.isArray(vendor.documents)) {
-        console.log(`[setup] Vendor ${vendor.name} has ${vendor.documents.length} documents`);
-        
-        for (const document of vendor.documents) {
-          read_document(document);
-        }
-      } else {
-        console.log(`[setup] Vendor ${vendor.name} has no documents`);
-      }
     }
     
     console.log("[setup] Setup completed successfully");
