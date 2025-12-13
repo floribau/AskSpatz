@@ -16,9 +16,11 @@ import { PricePoint, Vendor } from "@/data/types";
 interface LiveRaceChartProps {
   priceHistory: PricePoint[];
   vendors: Vendor[];
+  selectedVendorId: string | null;
+  onVendorClick: (vendorId: string | null) => void;
 }
 
-export function LiveRaceChart({ priceHistory, vendors }: LiveRaceChartProps) {
+export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendorClick }: LiveRaceChartProps) {
   // Find the vendor with the lowest current price
   const latestRound = priceHistory[priceHistory.length - 1];
   let lowestPrice = Infinity;
@@ -120,11 +122,17 @@ export function LiveRaceChart({ priceHistory, vendors }: LiveRaceChartProps) {
           {vendors.map((vendor) => {
             const currentPrice = latestRound?.[vendor.id] as number | undefined;
             const isWinner = vendor.id === winningVendorId;
+            const isSelected = selectedVendorId === vendor.id;
             return (
-              <div
+              <button
                 key={vendor.id}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
-                  isWinner ? "bg-secondary/20 ring-2 ring-secondary" : "bg-muted"
+                onClick={() => onVendorClick(vendor.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
+                  isSelected
+                    ? "ring-2 ring-primary bg-primary/10"
+                    : isWinner
+                    ? "bg-secondary/20 ring-2 ring-secondary hover:bg-secondary/30"
+                    : "bg-muted hover:bg-muted/80"
                 }`}
               >
                 <div
@@ -138,7 +146,7 @@ export function LiveRaceChart({ priceHistory, vendors }: LiveRaceChartProps) {
                   </span>
                 )}
                 {isWinner && <SpatzIcon size={16} />}
-              </div>
+              </button>
             );
           })}
         </div>

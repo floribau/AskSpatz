@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, Hand } from "lucide-react";
+import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { SuggestionCard } from "@/components/SuggestionCard";
-import { VendorLeaderboard } from "@/components/VendorLeaderboard";
 import { InterventionModal } from "@/components/InterventionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +14,25 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { NegotiationDetail, Message } from "@/data/types";
 
+interface Offer {
+  id: number;
+  negotiation_id: number;
+  vendor_id: number;
+  vendor_name: string;
+  description: string;
+  price: number;
+}
+
 export function LiveRace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showIntervention, setShowIntervention] = useState(false);
   const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [allMessages, setAllMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -60,8 +71,19 @@ export function LiveRace() {
         };
         
         if (isMounted) {
+          console.log("[LiveRace] Vendors:", data.vendors?.map((v: any) => ({ id: v.id, name: v.name })));
+          console.log("[LiveRace] Messages vendor_ids:", data.messages?.map((m: any) => m.vendor_id));
+          
           setNegotiation(negotiationDetail);
+          setAllMessages(data.messages || []);
+          setOffers(data.offers || []);
           setIsLoading(false);
+
+          // Auto-select the first vendor if none is selected
+          if (!selectedVendorId && data.vendors && data.vendors.length > 0) {
+            console.log("[LiveRace] Auto-selecting vendor:", data.vendors[0].id);
+            setSelectedVendorId(data.vendors[0].id);
+          }
 
           // Stop polling if negotiation is finished
           if (data.status === "finished" || data.status === "COMPLETED") {
@@ -237,45 +259,61 @@ export function LiveRace() {
           </CardContent>
         </Card>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Left Column - Chart & Communication */}
-          <div className="lg:col-span-2 space-y-6">
-            <LiveRaceChart
-              priceHistory={negotiation.priceHistory}
-              vendors={negotiation.vendors}
-            />
-            <CommunicationLog messages={negotiation.messages} />
-          </div>
+        {/* Main Content */}
+        <div className="space-y-6 mb-8">
+          <LiveRaceChart
+            priceHistory={negotiation.priceHistory}
+            vendors={negotiation.vendors}
+            selectedVendorId={selectedVendorId}
+            onVendorClick={setSelectedVendorId}
+          />
+          <CommunicationLog 
+            messages={
+              selectedVendorId 
+                ? allMessages.filter((m: any) => m.vendor_id && String(m.vendor_id) === String(selectedVendorId))
+                : allMessages
+            } 
+          />
 
-          {/* Right Column - Agent Info */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <SpatzIcon size={20} />
-                  Agent Rationale
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {negotiation.agentRationale}
+          {/* Offers Widget */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-success" />
+                Extracted Offers ({offers.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {offers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No offers extracted yet. Offers will appear here once the agent finishes negotiating.
                 </p>
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-sm font-medium">Risk Score</span>
-                  <span className="text-lg font-bold text-warning">
-                    {negotiation.riskScore}/10
-                  </span>
+              ) : (
+                <div className="space-y-4">
+                  {offers.map((offer) => (
+                    <div
+                      key={offer.id}
+                      className="p-4 border rounded-lg bg-muted/30"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-muted-foreground mb-1">
+                            {offer.vendor_name}
+                          </p>
+                          <p className="text-sm break-words">{offer.description}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-2xl font-bold text-success">
+                            {formatCurrency(offer.price)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-
-            <VendorLeaderboard
-              vendors={negotiation.vendors}
-              priceHistory={negotiation.priceHistory}
-              startingPrice={negotiation.startingPrice}
-            />
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Human Intervention Section (for REVIEW_REQUIRED) */}
