@@ -136,10 +136,6 @@ export function LiveRace() {
     );
   }
 
-  // Get latest price round for calculations
-  const latestRound =
-    negotiation.priceHistory[negotiation.priceHistory.length - 1];
-
   const handleSendMessage = (message: string) => {
     const newMessage: Message = {
       sender: "human",
@@ -170,20 +166,29 @@ export function LiveRace() {
     setShowIntervention(true);
   };
 
-  // Find best price
-  let lowestPrice = negotiation.startingPrice;
+  // Find best price across all price history rounds
+  let lowestPrice = Infinity;
   let winningVendor = "";
-  negotiation.vendors.forEach((vendor) => {
-    const price = latestRound?.[vendor.id] as number | undefined;
-    if (price && price < lowestPrice) {
-      lowestPrice = price;
-      winningVendor = vendor.company;
-    }
+  
+  // Look through all rounds to find the absolute lowest price
+  negotiation.priceHistory.forEach((round) => {
+    negotiation.vendors.forEach((vendor) => {
+      const price = round[vendor.id] as number | undefined;
+      if (price && price < lowestPrice) {
+        lowestPrice = price;
+        winningVendor = vendor.company;
+      }
+    });
   });
-  const savingsPercent = (
-    ((negotiation.startingPrice - lowestPrice) / negotiation.startingPrice) *
-    100
-  ).toFixed(1);
+  
+  // If no prices found, show starting price
+  if (lowestPrice === Infinity) {
+    lowestPrice = negotiation.startingPrice || 0;
+  }
+  
+  const savingsPercent = negotiation.startingPrice > 0
+    ? (((negotiation.startingPrice - lowestPrice) / negotiation.startingPrice) * 100).toFixed(1)
+    : "0.0";
 
   return (
     <div className="min-h-screen bg-background">

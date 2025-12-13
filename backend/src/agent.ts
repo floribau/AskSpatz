@@ -324,9 +324,14 @@ class Agent {
       throw new Error("Agent not initialized. Call initialize() first.");
     }
 
-    const response = await this.agent.invoke({
-      messages: [{ role: "user", content: message }],
-    });
+    const response = await this.agent.invoke(
+      {
+        messages: [{ role: "user", content: message }],
+      },
+      {
+        recursionLimit: 100,
+      }
+    );
 
     console.log(`[Agent] Response: ${response}`);
 

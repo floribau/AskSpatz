@@ -56,3 +56,11 @@ export interface Offer {
   description: string | null;
   price: number | null;
 }
+
+export interface NegotiationState {
+  id: number;
+  negotiation_id: number;
+  price: number;
+  description: string | null;
+  created_at: string;
+}

@@ -313,6 +313,54 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
       };
     });
 
+    // Fetch negotiation states for price history
+    const { data: states, error: statesError } = await supabase
+      .from("negotiation_state")
+      .select("*")
+      .in("negotiation_id", negotiationIds.length > 0 ? negotiationIds : [-1])
+      .order("created_at", { ascending: true });
+
+    if (statesError) {
+      console.error("[API] Error fetching negotiation states:", statesError.message);
+    }
+
+    // Build price history from negotiation states
+    // Group states by negotiation_id (vendor) and create rounds
+    const priceHistory: { round: number; [vendorId: string]: number }[] = [];
+    
+    if (states && states.length > 0) {
+      // Group states by vendor
+      const statesByVendor: { [vendorId: string]: { price: number; created_at: string }[] } = {};
+      
+      for (const state of states) {
+        const negotiation = negotiations?.find((n) => n.id === state.negotiation_id);
+        const vendorId = negotiation?.vendor_id?.toString();
+        if (vendorId) {
+          if (!statesByVendor[vendorId]) {
+            statesByVendor[vendorId] = [];
+          }
+          statesByVendor[vendorId].push({ price: state.price, created_at: state.created_at });
+        }
+      }
+
+      // Find the max number of rounds across all vendors
+      const maxRounds = Math.max(...Object.values(statesByVendor).map(s => s.length), 0);
+
+      // Create price history with rounds
+      for (let i = 0; i < maxRounds; i++) {
+        const round: { round: number; [vendorId: string]: number } = { round: i + 1 };
+        for (const [vendorId, vendorStates] of Object.entries(statesByVendor)) {
+          if (vendorStates[i]) {
+            round[vendorId] = vendorStates[i].price;
+          } else if (i > 0 && vendorStates[i - 1]) {
+            // Carry forward the last known price
+            round[vendorId] = vendorStates[i - 1].price;
+          }
+        }
+        priceHistory.push(round);
+      }
+    }
+
     // Generate colors for vendors
     const colors = [
       "hsl(207, 90%, 61%)",
@@ -364,7 +412,7 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
       startingPrice: 25000,
       targetReduction: 25,
       targetPrice: 18750,
-      priceHistory: [],
+      priceHistory: priceHistory.length > 0 ? priceHistory : [{ round: 1 }],
       suggestions: [],
       agentRationale: "Negotiation in progress with selected vendors.",
       riskScore: 5,
