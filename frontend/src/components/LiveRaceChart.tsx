@@ -17,12 +17,10 @@ import { PricePoint, Vendor } from "@/data/types";
 interface LiveRaceChartProps {
   priceHistory: PricePoint[];
   vendors: Vendor[];
-  selectedVendorId: string | null;
-  onVendorClick: (vendorId: string | null) => void;
   finishedVendorIds?: string[];
 }
 
-export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendorClick, finishedVendorIds = [] }: LiveRaceChartProps) {
+export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }: LiveRaceChartProps) {
   // Find the vendor with the lowest current price
   const latestRound = priceHistory[priceHistory.length - 1];
   let lowestPrice = Infinity;
@@ -36,6 +34,9 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
     }
   });
 
+  // Check if negotiation is still active
+  const isActive = finishedVendorIds.length < vendors.length;
+
   const formatYAxis = (value: number) => {
     if (value >= 1000) {
       return `$${(value / 1000).toFixed(0)}k`;
@@ -47,8 +48,16 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
     <Card className="bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
-          <SpatzIcon size={24} />
-          Live Price Race
+          Price Comparison
+          {isActive && (
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75"></div>
+              </div>
+              <span className="text-xs text-red-400 font-medium">Live</span>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -127,20 +136,16 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
           {vendors.map((vendor) => {
             const currentPrice = latestRound?.[vendor.id] as number | undefined;
             const isWinner = vendor.id === winningVendorId;
-            const isSelected = selectedVendorId === vendor.id;
             const isFinished = finishedVendorIds.includes(vendor.id);
             return (
-              <button
+              <div
                 key={vendor.id}
-                onClick={() => onVendorClick(vendor.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
                   isFinished
                     ? "bg-green-500/20 ring-2 ring-green-400"
-                    : isSelected
-                    ? "ring-2 ring-blue-500 bg-blue-500/20"
                     : isWinner
-                    ? "bg-gray-700/50 ring-2 ring-gray-500 hover:bg-gray-700/70"
-                    : "bg-gray-800/50 hover:bg-gray-800/70"
+                    ? "bg-gray-700/50 ring-2 ring-gray-500"
+                    : "bg-gray-800/50"
                 }`}
               >
                 <div
@@ -155,7 +160,7 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
                 )}
                 {isFinished && <CheckCircle className="h-4 w-4 text-green-400" />}
                 {!isFinished && isWinner && <SpatzIcon size={16} />}
-              </button>
+              </div>
             );
           })}
         </div>
