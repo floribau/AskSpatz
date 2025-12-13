@@ -452,17 +452,39 @@ class Agent {
       console.log(`[Agent] Competitive leverage available: $${competitiveOffer.price} vs current best: $${currentBestOffer.price}`);
     }
 
+    const invokeOptions: any = {
+      recursionLimit: 100,
+    };
+    
+    // Add langfuse handler if available
+    try {
+      if (langfuseHandler) {
+        invokeOptions.callbacks = [langfuseHandler];
+      }
+    } catch (err) {
+      console.warn("[Agent] Langfuse handler not available, continuing without it");
+    }
+
     const response = await this.agent.invoke(
       {
         messages: [{ role: "user", content: message + leverageContext }],
       },
-      {
-        recursionLimit: 100,
-        callbacks: [langfuseHandler],
-      }
+      invokeOptions
     );
 
-    console.log(`[Agent] Response: ${response}`);
+    // Better logging of response structure
+    if (response && typeof response === 'object') {
+      const messages = response.messages || [];
+      const toolCalls = messages.filter((msg: any) => msg.name && msg.name !== 'user' && msg.name !== 'assistant');
+      console.log(`[Agent] Response received: ${messages.length} messages, ${toolCalls.length} tool calls`);
+      if (toolCalls.length > 0) {
+        console.log(`[Agent] Tool calls:`, toolCalls.map((t: any) => t.name));
+      } else {
+        console.log(`[Agent] WARNING: No tool calls in response`);
+      }
+    } else {
+      console.log(`[Agent] Response: ${JSON.stringify(response)}`);
+    }
 
     return response;
   }
