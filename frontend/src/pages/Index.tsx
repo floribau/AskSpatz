@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
 import { NegotiationCard } from "@/components/NegotiationCard";
+import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
 export function Index() {
   const navigate = useNavigate();
@@ -36,82 +37,120 @@ export function Index() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header onNewNegotiation={() => navigate("/new")} />
+    <div 
+      className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{
+        backgroundImage: 'url(/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <main className="w-full px-4 md:px-6 pt-8 pb-8 relative z-10">
+        <div className="w-full mx-auto">
+          {/* Centered header section with logo */}
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <SpatzIcon size={48} />
+              <h1 className="text-4xl font-bold text-white">
+                ask<span className="text-gray-900">Spatz</span>
+              </h1>
+            </div>
+            <p className="text-white/80">
+              Monitor and manage your autonomous procurement negotiations in
+              real-time.
+            </p>
+          </div>
 
-      <main className="container px-4 md:px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Procurement Negotiations
-          </h1>
-          <p className="text-muted-foreground">
-            Monitor and manage your autonomous procurement negotiations in
-            real-time.
-          </p>
+          {/* Main content: Large centered Start Negotiation button */}
+          <div className="flex justify-center items-center my-32">
+            <Button 
+              onClick={() => navigate("/new")} 
+              size="lg" 
+              className="text-4xl px-24 py-12 h-auto font-semibold bg-gray-900/80 backdrop-blur-md hover:bg-gray-900/90 text-white border border-gray-700/50 shadow-lg transition-all min-w-[400px]"
+            >
+              Ready to negotiate?
+            </Button>
+          </div>
+
+          {/* Dark gray tile container for negotiations */}
+          <div className="bg-gray-900 rounded-t-2xl mt-64 p-6 md:p-8">
+            <Tabs defaultValue="active" className="space-y-6">
+              <div className="flex justify-start">
+                <TabsList className="bg-gray-800">
+                  <TabsTrigger 
+                    value="active" 
+                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
+                  >
+                    Active ({activeNegotiations.length})
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="completed" 
+                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
+                  >
+                    Completed ({completedNegotiations.length})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+            <TabsContent value="active" className="space-y-4">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-lg text-muted-foreground">
+                    Loading negotiations...
+                  </p>
+                </div>
+              ) : activeNegotiations.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-lg text-muted-foreground">
+                    No active negotiations
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Start a new negotiation to see it here
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                  {activeNegotiations.map((negotiation) => (
+                    <NegotiationCard
+                      key={negotiation.id}
+                      negotiation={negotiation}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="completed" className="space-y-4">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-lg text-muted-foreground">
+                    Loading negotiations...
+                  </p>
+                </div>
+              ) : completedNegotiations.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-lg text-muted-foreground">
+                    No completed negotiations yet
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Completed negotiations will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                  {completedNegotiations.map((negotiation) => (
+                    <NegotiationCard
+                      key={negotiation.id}
+                      negotiation={negotiation}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            </Tabs>
+          </div>
         </div>
-
-        <Tabs defaultValue="active" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="active">
-              Active ({activeNegotiations.length})
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed ({completedNegotiations.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="active" className="space-y-4">
-            {isLoading ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  Loading negotiations...
-                </p>
-              </div>
-            ) : activeNegotiations.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  No active negotiations
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Start a new negotiation to see it here
-                </p>
-              </div>
-            ) : (
-              activeNegotiations.map((negotiation) => (
-                <NegotiationCard
-                  key={negotiation.id}
-                  negotiation={negotiation}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="completed" className="space-y-4">
-            {isLoading ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  Loading negotiations...
-                </p>
-              </div>
-            ) : completedNegotiations.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  No completed negotiations yet
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Completed negotiations will appear here
-                </p>
-              </div>
-            ) : (
-              completedNegotiations.map((negotiation) => (
-                <NegotiationCard
-                  key={negotiation.id}
-                  negotiation={negotiation}
-                />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
       </main>
     </div>
   );

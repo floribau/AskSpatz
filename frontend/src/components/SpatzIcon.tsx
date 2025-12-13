@@ -10,7 +10,7 @@ export function SpatzIcon({ size = 32, className = "" }: SpatzIconProps) {
   return (
     <div
       className={cn(
-        "flex items-center justify-center rounded-full bg-primary text-primary-foreground",
+        "flex items-center justify-center rounded-full bg-gray-900 text-white",
         className
       )}
       style={{ width: size, height: size }}
