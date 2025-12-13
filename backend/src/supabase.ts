@@ -55,6 +55,8 @@ export interface Offer {
   negotiation_id: number | null;
   description: string | null;
   price: number | null;
+  pros: string[] | null;
+  cons: string[] | null;
 }
 
 export interface NegotiationState {

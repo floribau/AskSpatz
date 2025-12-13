@@ -116,7 +116,7 @@ class Agent {
       },
     );
     const finishNegotiation = tool(
-      async ({ offers }: { offers: { description: string, price: number }[] }): Promise<string> => {
+      async ({ offers }: { offers: { description: string, price: number, pros: string[], cons: string[] }[] }): Promise<string> => {
         console.log(`[finishNegotiation] conversation_id: ${this.conversation_id}`);
         console.log(`[finishNegotiation] negotiation_id: ${this.negotiation_id}`);
         console.log(`[finishNegotiation] offers: ${JSON.stringify(offers)}`);
@@ -130,6 +130,8 @@ class Agent {
                 negotiation_id: this.negotiation_id,
                 description: offer.description,
                 price: offer.price,
+                pros: offer.pros,
+                cons: offer.cons,
               });
 
             if (error) {
@@ -200,11 +202,13 @@ class Agent {
       },
       {
         name: "finish_negotiation",
-        description: "When you are satisfied with the offer(s) the vendor has made, use this tool to finish the negotiation.",
+        description: "When you are satisfied with the offer the vendor has made or the negotiation is stuck (you have the feeling that the vendor is not willing to make a better offer), use this tool to finish the negotiation. Add also three pros and three cons of the offer to the offer object. It should help to understand the offer better, therefore it is IMPORTANT that you keep them very short and concise.",
         schema: z.object({
           offers: z.array(z.object({
             description: z.string().describe("A short description about the terms and conditions of the offer."),
             price: z.number().describe("The price of the offer."),
+            pros: z.array(z.string()).describe("three advantages of the offer. MAX 15 characters per pro."),
+            cons: z.array(z.string()).describe("three disadvantages of the offer. MAX 15 characters per con."),
           })).describe("The offers the vendor has made."),
         }),
       },
