@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { SpatzIcon } from "./SpatzIcon";
 import { cn } from "@/lib/utils";
 import { Message } from "@/data/types";
+import ReactMarkdown from "react-markdown";
 
 interface CommunicationLogProps {
   messages: Message[];
@@ -14,7 +15,7 @@ export function CommunicationLog({ messages }: CommunicationLogProps) {
         <CardTitle>Negotiation Transcript</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] overflow-y-auto space-y-3 pr-2">
+        <div className="h-[600px] overflow-y-auto overflow-x-hidden space-y-3 pr-2">
           {messages.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               No messages yet
@@ -42,7 +43,9 @@ export function CommunicationLog({ messages }: CommunicationLogProps) {
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
-                <p className="text-sm text-foreground">{message.content}</p>
+                <div className="text-sm text-foreground markdown-content">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
               </div>
             ))
           )}

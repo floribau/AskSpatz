@@ -282,6 +282,31 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
       console.error("[API] Error fetching vendors:", vendorError.message);
     }
 
+    // Fetch offers for all negotiations in this group
+    const negotiationIds = negotiations?.map((n) => n.id).filter(Boolean) || [];
+    const { data: offers, error: offersError } = await supabase
+      .from("offer")
+      .select("*")
+      .in("negotiation_id", negotiationIds.length > 0 ? negotiationIds : [-1]);
+
+    if (offersError) {
+      console.error("[API] Error fetching offers:", offersError.message);
+    }
+
+    // Format offers with vendor info
+    const formattedOffers = (offers || []).map((offer) => {
+      const negotiation = negotiations?.find((n) => n.id === offer.negotiation_id);
+      const vendor = vendors?.find((v) => v.id === negotiation?.vendor_id);
+      return {
+        id: offer.id,
+        negotiation_id: offer.negotiation_id,
+        vendor_id: negotiation?.vendor_id,
+        vendor_name: vendor?.name || "Unknown Vendor",
+        description: offer.description,
+        price: offer.price,
+      };
+    });
+
     // Generate colors for vendors
     const colors = [
       "hsl(207, 90%, 61%)",
@@ -303,13 +328,24 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
       category: "Vendor",
     }));
 
-    // Format messages for frontend
-    const formattedMessages = (messages || []).map((msg) => ({
-      sender: msg.type === "assistant" ? "agent" : "vendor",
-      name: msg.type === "assistant" ? "AskSpatz Agent" : "Vendor",
-      content: msg.message || "",
-      timestamp: msg.created_at,
-    }));
+    // Format messages for frontend with vendor info
+    const formattedMessages = (messages || []).map((msg) => {
+      // Find which negotiation this message belongs to (compare as numbers)
+      const negotiation = negotiations?.find((n) => Number(n.conversation_id) === Number(msg.conversation_id));
+      const vendor = vendors?.find((v) => Number(v.id) === Number(negotiation?.vendor_id));
+      return {
+        sender: msg.type === "assistant" ? "agent" : "vendor",
+        name: msg.type === "assistant" ? "AskSpatz Agent" : (vendor?.name || "Vendor"),
+        content: msg.message || "",
+        timestamp: msg.created_at,
+        conversation_id: msg.conversation_id,
+        vendor_id: negotiation?.vendor_id?.toString() || null,
+      };
+    });
+    
+    console.log(`[API] Negotiations: ${JSON.stringify(negotiations?.map(n => ({ id: n.id, vendor_id: n.vendor_id, conv_id: n.conversation_id })))}`);
+    console.log(`[API] Vendors: ${JSON.stringify(formattedVendors.map(v => ({ id: v.id, name: v.name })))}`);
+    console.log(`[API] Messages: ${formattedMessages.length} total, vendor_ids: ${[...new Set(formattedMessages.map(m => m.vendor_id))].join(', ')}`);
 
     // Build the response
     const response = {
@@ -321,6 +357,7 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
       vendors: formattedVendors,
       negotiations: negotiations || [],
       messages: formattedMessages,
+      offers: formattedOffers,
       // Placeholder values - can be calculated from offers later
       startingPrice: 25000,
       targetReduction: 25,
