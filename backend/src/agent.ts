@@ -89,6 +89,7 @@ class Agent {
             console.error("[writeEmail] Failed to save user message:", userMsgError.message);
           }
 
+          // Return the vendor's response
           return data.content;
         } catch (err) {
           return `Error sending message: ${err}`;
@@ -154,7 +155,47 @@ class Agent {
         }),
       },
     );
-    return [writeEmail, finishNegotiation];
+    const updateState = tool(
+      async ({ price, description }: { price: number; description: string }): Promise<string> => {
+        console.log(`[updateState] negotiation_id: ${this.negotiation_id}`);
+        console.log(`[updateState] price: ${price}, description: ${description}`);
+        
+        if (!this.negotiation_id) {
+          return "Error: No negotiation_id set; cannot update state.";
+        }
+
+        try {
+          const { data, error } = await supabase
+            .from("negotiation_state")
+            .insert({
+              negotiation_id: this.negotiation_id,
+              price: price,
+              description: description,
+            })
+            .select();
+
+          if (error) {
+            throw new Error(`Failed to update negotiation state: ${error.message}`);
+          }
+
+          console.log(`[updateState] Successfully updated negotiation state:`, data);
+          return `State recorded: Price ${price}. Now respond to the vendor using write_email.`;
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.error(`[updateState] Error updating negotiation state:`, errorMessage);
+          return `Error updating negotiation state: ${errorMessage}`;
+        }
+      },
+      {
+        name: "update_state",
+        description: "MANDATORY: Call this tool ONCE immediately after receiving a vendor response that contains a price or offer. Extract the price and description from the vendor's message. After calling this tool, you must then use write_email to send your response to the vendor. Do not call this tool multiple times for the same vendor response.",
+        schema: z.object({
+          price: z.number().describe("The current price being discussed or offered in the negotiation. Extract this from the vendor's latest message."),
+          description: z.string().describe("A description of the current state extracted from the vendor's response, including the price, any terms, conditions, or details relevant to the current offer."),
+        }),
+      },
+    );
+    return [writeEmail, finishNegotiation, updateState];
   }
 
   async initialize(
@@ -278,6 +319,7 @@ class Agent {
   }
 
   async invoke(message: string): Promise<any> {
+    console.log(`[Agent] Invoking agent with message: ${message}`);
     if (!this.agent) {
       throw new Error("Agent not initialized. Call initialize() first.");
     }
@@ -285,6 +327,8 @@ class Agent {
     const response = await this.agent.invoke({
       messages: [{ role: "user", content: message }],
     });
+
+    console.log(`[Agent] Response: ${response}`);
 
     return response;
   }
