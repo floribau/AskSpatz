@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
+import setup_vendors from "./setup_vendors.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,6 +25,7 @@ async function testSupabaseConnection() {
 }
 
 testSupabaseConnection();
+setup_vendors();
 
 // Store active negotiations
 const activeNegotiations = new Map<string, { agent: Agent; status: string }>();
