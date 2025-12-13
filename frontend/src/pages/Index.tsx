@@ -5,6 +5,7 @@ import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
 export function Index() {
   const navigate = useNavigate();
@@ -84,6 +85,20 @@ export function Index() {
     return () => clearTimeout(timeout);
   }, [typingText, currentExampleIndex, isDeleting, inputValue, examples]);
 
+  const handleSubmit = () => {
+    if (inputValue.trim()) {
+      // Navigate to new negotiation page with the input value
+      navigate("/new", { state: { naturalLanguageInput: inputValue.trim() } });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   const activeNegotiations = negotiations.filter(
     (n) => n.status === "IN_PROGRESS" || n.status === "REVIEW_REQUIRED"
   );
@@ -131,8 +146,9 @@ export function Index() {
                 ref={textareaRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder=""
-                className="w-full min-h-[120px] px-6 py-4 text-white text-lg bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all"
+                className="w-full min-h-[120px] px-6 py-4 pr-20 text-white text-lg bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all"
                 style={{ 
                   fontFamily: 'inherit',
                   lineHeight: '1.5'
@@ -144,6 +160,14 @@ export function Index() {
                   <span className="animate-pulse">|</span>
                 </div>
               )}
+              <Button
+                onClick={handleSubmit}
+                disabled={!inputValue.trim()}
+                size="sm"
+                className="absolute bottom-4 right-4 h-8 px-3 bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
             <Button
               onClick={() => navigate("/new")}
