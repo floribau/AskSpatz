@@ -214,23 +214,6 @@ class Agent {
         }),
       },
     );
-    const learnFromNegotiation = tool(
-      async (): Promise<string> => {
-        try {
-          await this.learnFromNegotiationInternal();
-          return `Successfully learned from negotiation and updated vendor behavior description.`;
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          console.error(`[learnFromNegotiation] Error:`, errorMessage);
-          return `Error learning from negotiation: ${errorMessage}`;
-        }
-      },
-      {
-        name: "learn_from_negotiation",
-        description: "Automatically called after finishing a negotiation. Analyzes the negotiation conversation to refine and update the vendor's behavior description in the database. This helps improve future negotiations with this vendor.",
-        schema: z.object({}),
-      },
-    );
     const updateState = tool(
       async ({ price, description }: { price: number; description: string }): Promise<string> => {
         console.log(`[updateState] negotiation_id: ${this.negotiation_id}`);
@@ -271,7 +254,7 @@ class Agent {
         }),
       },
     );
-    return [writeEmail, finishNegotiation, updateState, learnFromNegotiation];
+    return [writeEmail, finishNegotiation, updateState];
   }
 
   /**
