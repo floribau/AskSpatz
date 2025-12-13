@@ -120,8 +120,8 @@ export function NewNegotiation() {
         variant: "success",
       });
 
-      // Navigate to the new negotiation (using first mock negotiation for demo)
-      navigate("/negotiation/NEG-2024-001");
+      // Navigate to the new negotiation group
+      navigate(`/negotiation/${data.negotiationGroupId}`);
     } catch (error) {
       console.error("Error starting negotiations:", error);
       toast({
