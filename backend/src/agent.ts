@@ -98,9 +98,9 @@ class Agent {
       },
       {
         name: "write_email",
-        description: "Write and send an email to the vendor. Before writing, you will receive competitive leverage information if a better offer exists from other vendors in the same negotiation group. Use this leverage strategically (mentioning only price and conditions, never vendor names) to negotiate better terms.",
+        description: "Write and send an email to the vendor. CRITICAL: Before writing, review the vendor's behavior profile in the system context and adapt your email's tone, style, and negotiation approach accordingly. The vendor behavior description tells you how this specific vendor negotiates—use it to craft the most effective message. Also consider competitive leverage information if available from other vendors in the same negotiation group.",
         schema: z.object({
-          body: z.string().describe("The body of the Email to send. If competitive leverage is available, consider incorporating it naturally into your negotiation strategy."),
+          body: z.string().describe("The body of the Email to send. MUST be tailored to the vendor's behavior profile—adjust tone, assertiveness, relationship-building, and negotiation tactics based on their described personality and negotiation style. If competitive leverage is available, incorporate it naturally."),
         }),
       },
     );
@@ -393,13 +393,20 @@ class Agent {
   private buildSystemPrompt(): string {
     let contextSection = "\n\n## Current Negotiation Context\n";
     
-    // Add vendor information
+    // Add vendor information with emphasis on behavior
     if (this.vendorInfo) {
       contextSection += `\n### Vendor Information\n`;
       contextSection += `- **Vendor Name**: ${this.vendorInfo.name}\n`;
       if (this.vendorInfo.behaviour) {
-        contextSection += `- **Vendor Personality/Approach**: ${this.vendorInfo.behaviour}\n`;
-        contextSection += `- Use this knowledge about their negotiation style to tailor your approach accordingly.\n`;
+        contextSection += `\n### CRITICAL: Vendor Behavior Profile\n`;
+        contextSection += `${this.vendorInfo.behaviour}\n\n`;
+        contextSection += `**IMPORTANT**: The above behavior description is crucial for your negotiation strategy. You MUST:\n`;
+        contextSection += `- Adapt your communication style, tone, and approach to match this vendor's personality and negotiation patterns\n`;
+        contextSection += `- Use this information to predict how they might respond to different negotiation tactics\n`;
+        contextSection += `- Tailor your emails to be most effective with this specific vendor's style\n`;
+        contextSection += `- Adjust your level of assertiveness, relationship-building, and technical detail based on their behavior profile\n`;
+        contextSection += `- Consider their likely pain points, motivations, and decision-making style when crafting your messages\n`;
+        contextSection += `- Reference specific aspects of their behavior profile when it's strategically advantageous\n\n`;
       }
     }
     
