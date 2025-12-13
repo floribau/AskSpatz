@@ -44,9 +44,9 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
   };
 
   return (
-    <Card>
+    <Card className="bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-white">
           <SpatzIcon size={24} />
           Live Price Race
         </CardTitle>
@@ -55,33 +55,35 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={priceHistory}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis
                 dataKey="round"
                 tickFormatter={(value) => `R${value}`}
                 className="text-xs"
+                stroke="#9CA3AF"
               />
               <YAxis
                 tickFormatter={formatYAxis}
                 className="text-xs"
                 domain={["auto", "auto"]}
+                stroke="#9CA3AF"
               />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <div className="bg-popover border rounded-lg p-3 shadow-lg">
-                        <p className="font-semibold mb-2">Round {label}</p>
+                      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-lg">
+                        <p className="font-semibold mb-2 text-white">Round {label}</p>
                         {payload.map((entry) => (
                           <div
                             key={entry.dataKey}
                             className="flex justify-between gap-4 text-sm"
                           >
-                            <span style={{ color: entry.color }}>
+                            <span style={{ color: entry.color }} className="text-white">
                               {vendors.find((v) => v.id === entry.dataKey)
                                 ?.company || entry.dataKey}
                             </span>
-                            <span className="font-medium">
+                            <span className="font-medium text-white">
                               {formatCurrency(entry.value as number)}
                             </span>
                           </div>
@@ -106,12 +108,13 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
               {lowestPrice < Infinity && (
                 <ReferenceLine
                   y={lowestPrice}
-                  stroke="hsl(var(--success))"
+                  stroke="#34D399"
                   strokeDasharray="5 5"
                   label={{
                     value: `Best: ${formatCurrency(lowestPrice)}`,
                     position: "right",
-                    className: "text-xs fill-success",
+                    fill: "#34D399",
+                    className: "text-xs",
                   }}
                 />
               )}
@@ -120,7 +123,7 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
         </div>
 
         {/* Legend */}
-        <div className="mt-4 flex flex-wrap gap-4">
+        <div className="mt-4 flex flex-wrap gap-4 justify-center">
           {vendors.map((vendor) => {
             const currentPrice = latestRound?.[vendor.id] as number | undefined;
             const isWinner = vendor.id === winningVendorId;
@@ -132,25 +135,25 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
                 onClick={() => onVendorClick(vendor.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
                   isFinished
-                    ? "bg-success/20 ring-2 ring-success"
+                    ? "bg-green-500/20 ring-2 ring-green-400"
                     : isSelected
-                    ? "ring-2 ring-primary bg-primary/10"
+                    ? "ring-2 ring-blue-500 bg-blue-500/20"
                     : isWinner
-                    ? "bg-secondary/20 ring-2 ring-secondary hover:bg-secondary/30"
-                    : "bg-muted hover:bg-muted/80"
+                    ? "bg-gray-700/50 ring-2 ring-gray-500 hover:bg-gray-700/70"
+                    : "bg-gray-800/50 hover:bg-gray-800/70"
                 }`}
               >
                 <div
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: vendor.color }}
                 />
-                <span className="text-sm font-medium">{vendor.company}</span>
+                <span className="text-sm font-medium text-white">{vendor.company}</span>
                 {currentPrice && (
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-white/70">
                     {formatCurrency(currentPrice)}
                   </span>
                 )}
-                {isFinished && <CheckCircle className="h-4 w-4 text-success" />}
+                {isFinished && <CheckCircle className="h-4 w-4 text-green-400" />}
                 {!isFinished && isWinner && <SpatzIcon size={16} />}
               </button>
             );

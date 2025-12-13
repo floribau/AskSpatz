@@ -9,14 +9,14 @@ interface CommunicationLogProps {
 
 export function CommunicationLog({ messages }: CommunicationLogProps) {
   return (
-    <Card>
+    <Card className="bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
       <CardHeader>
-        <CardTitle>Negotiation Transcript</CardTitle>
+        <CardTitle className="text-white">Negotiation Transcript</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] overflow-y-auto overflow-x-hidden space-y-3 pr-2">
           {messages.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
+            <p className="text-center text-white/70 py-8">
               No messages yet
             </p>
           ) : (
@@ -26,23 +26,23 @@ export function CommunicationLog({ messages }: CommunicationLogProps) {
                 className={cn(
                   "p-3 rounded-lg",
                   message.sender === "agent" &&
-                    "bg-primary/10 border border-primary/20",
+                    "bg-blue-500/20 border border-blue-500/30",
                   message.sender === "vendor" &&
-                    "bg-muted border border-border",
+                    "bg-gray-800/50 border border-gray-700/50",
                   message.sender === "human" &&
-                    "bg-secondary/10 border border-secondary/20 ml-8"
+                    "bg-purple-500/20 border border-purple-500/30 ml-8"
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     {message.sender === "agent" && <SpatzIcon size={20} />}
-                    <span className="font-semibold text-sm">{message.name}</span>
+                    <span className="font-semibold text-sm text-white">{message.name}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-white/60">
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
-                <p className="text-sm text-foreground whitespace-pre-wrap break-words">{message.content}</p>
+                <p className="text-sm text-white/90 whitespace-pre-wrap break-words">{message.content}</p>
               </div>
             ))
           )}
