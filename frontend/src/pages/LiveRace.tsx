@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy } from "lucide-react";
-import { Header } from "@/components/Header";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
@@ -29,7 +28,6 @@ interface Offer {
 
 export function LiveRace() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [showIntervention, setShowIntervention] = useState(false);
   const [showOffersPanel, setShowOffersPanel] = useState(false);
@@ -340,63 +338,67 @@ export function LiveRace() {
       <main className="w-full px-4 md:px-6 py-8 relative z-10">
 
         {/* Title */}
-        <div className="flex flex-col items-center gap-4 mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white">
-            {negotiation.productName || negotiation.title}
-          </h1>
-          <StatusBadge status={negotiation.status} />
+        <div className="flex flex-col items-center gap-4 mb-6 text-center">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-white">
+              {negotiation.productName || negotiation.title}
+            </h1>
+            <StatusBadge status={negotiation.status} />
+          </div>
         </div>
 
-        {/* Current Best Price Banner */}
-        <Card className="mb-8 bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
-          <CardContent className="py-6">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div>
-                <p className="text-sm text-white/70 mb-1">
+        {/* Current Best Price Banner - Centered and compact */}
+        <Card className="mb-8 bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg w-full max-w-2xl mx-auto">
+          <CardContent className="py-3 px-4">
+            <div className="flex flex-col items-center gap-3">
+              {/* Best Price */}
+              <div className="text-center">
+                <p className="text-xs text-white/70 mb-1">
                   Current Best Price
                 </p>
                 {lowestPrice < Infinity ? (
                   <>
-                    <p className="text-4xl font-bold text-green-400">
+                    <p className="text-2xl font-bold text-emerald-300">
                       {formatCurrency(lowestPrice)}
                     </p>
-                    <p className="text-sm text-white/70 mt-1">
+                    <p className="text-xs text-white/70 mt-1">
                       {winningVendor}
                     </p>
                   </>
                 ) : (
-                  <p className="text-2xl font-bold text-white/60">
+                  <p className="text-lg font-bold text-white/60">
                     Awaiting offers...
                   </p>
                 )}
               </div>
+
+              {/* Stats */}
               <div className="flex items-center gap-6">
-                <div className="grid grid-cols-2 gap-6 text-center">
-                  <div>
-                    <p className="text-xs text-white/70">Vendors</p>
-                    <p className="text-lg font-semibold text-white">
-                      {negotiation.vendors.length}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-white/70">Finished</p>
-                    <p className="text-lg font-semibold text-green-400">
-                      {finishedAgentsCount} / {negotiation.vendors.length}
-                    </p>
-                  </div>
+                <div className="text-center">
+                  <p className="text-xs text-white/70">Vendors</p>
+                  <p className="text-sm font-semibold text-white">
+                    {negotiation.vendors.length}
+                  </p>
                 </div>
-                {/* Show "View All Offers" button when negotiation is complete */}
-                {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
-                  <Button 
-                    onClick={() => setShowOffersPanel(true)}
-                    variant="success"
-                    className="gap-2"
-                  >
-                    <Trophy className="h-4 w-4" />
-                    View All Offers
-                  </Button>
-                )}
+                <div className="text-center">
+                  <p className="text-xs text-white/70">Finished</p>
+                  <p className="text-sm font-semibold text-emerald-300">
+                    {finishedAgentsCount} / {negotiation.vendors.length}
+                  </p>
+                </div>
               </div>
+
+              {/* View All Offers button */}
+              {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
+                <Button 
+                  onClick={() => setShowOffersPanel(true)}
+                  size="sm"
+                  className="gap-2 bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
+                >
+                  <Trophy className="h-4 w-4" />
+                  View All Offers
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -417,7 +419,7 @@ export function LiveRace() {
           <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
-                <DollarSign className="h-5 w-5 text-green-400" />
+                <DollarSign className="h-5 w-5 text-emerald-300" />
                 Extracted Offers ({offers.length})
               </CardTitle>
             </CardHeader>
@@ -443,11 +445,11 @@ export function LiveRace() {
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-success mb-1">Pros</p>
+                                <p className="text-xs font-semibold text-emerald-300 mb-1">Pros</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.pros.map((pro, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-success">+</span>
+                                      <span className="text-emerald-300">+</span>
                                       <span>{pro}</span>
                                     </li>
                                   ))}
@@ -456,11 +458,11 @@ export function LiveRace() {
                             )}
                             {offer.cons && offer.cons.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-destructive mb-1">Cons</p>
+                                <p className="text-xs font-semibold text-rose-300 mb-1">Cons</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.cons.map((con, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-destructive">−</span>
+                                      <span className="text-rose-300">−</span>
                                       <span>{con}</span>
                                     </li>
                                   ))}
@@ -470,7 +472,7 @@ export function LiveRace() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-2xl font-bold text-green-400">
+                          <p className="text-2xl font-bold text-emerald-300">
                             {formatCurrency(offer.price)}
                           </p>
                         </div>
@@ -485,9 +487,9 @@ export function LiveRace() {
 
         {/* Human Intervention Section (for REVIEW_REQUIRED) */}
         {negotiation.status === "REVIEW_REQUIRED" && (
-          <Card className="mt-8 bg-stone-900/80 backdrop-blur-md border-yellow-500/50 shadow-lg">
+          <Card className="mt-8 bg-stone-900/80 backdrop-blur-md border-amber-300/50 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-yellow-400 text-center">
+              <CardTitle className="text-amber-200 text-center">
                 Human Intervention Recommended
               </CardTitle>
             </CardHeader>
@@ -545,7 +547,7 @@ export function LiveRace() {
           <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-success" />
+                <Trophy className="h-5 w-5 text-emerald-300" />
                 All Offers ({offers.length})
               </SheetTitle>
             </SheetHeader>
@@ -584,7 +586,7 @@ export function LiveRace() {
                       }}
                       className={`p-4 border rounded-lg transition-all ${
                         isAccepted
-                          ? "bg-success/20 border-success ring-2 ring-success/50 shadow-lg cursor-default"
+                          ? "bg-emerald-300/20 border-emerald-300 ring-2 ring-emerald-300/50 shadow-lg cursor-default"
                           : isSelected
                           ? "bg-primary/10 border-primary ring-2 ring-primary/50 shadow-lg cursor-pointer hover:bg-primary/15"
                           : isClickable
@@ -593,9 +595,9 @@ export function LiveRace() {
                       }`}
                     >
                       {isAccepted && (
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-success/30">
-                          <CheckCircle className="h-5 w-5 text-success" />
-                          <span className="text-sm font-semibold text-success">Accepted Offer</span>
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-emerald-300/30">
+                          <CheckCircle className="h-5 w-5 text-emerald-300" />
+                          <span className="text-sm font-semibold text-emerald-300">Accepted Offer</span>
                         </div>
                       )}
                       {!isAccepted && isBestValue && (
@@ -627,11 +629,11 @@ export function LiveRace() {
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-success mb-1">Pros</p>
+                                <p className="text-xs font-semibold text-emerald-300 mb-1">Pros</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.pros.map((pro, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-success">+</span>
+                                      <span className="text-emerald-300">+</span>
                                       <span>{pro}</span>
                                     </li>
                                   ))}
@@ -640,11 +642,11 @@ export function LiveRace() {
                             )}
                             {offer.cons && offer.cons.length > 0 && (
                               <div>
-                                <p className="text-xs font-semibold text-destructive mb-1">Cons</p>
+                                <p className="text-xs font-semibold text-rose-300 mb-1">Cons</p>
                                 <ul className="text-xs space-y-0.5">
                                   {offer.cons.map((con, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
-                                      <span className="text-destructive">−</span>
+                                      <span className="text-rose-300">−</span>
                                       <span>{con}</span>
                                     </li>
                                   ))}
@@ -695,7 +697,7 @@ export function LiveRace() {
               return selectedOffer ? (
                 <div className="py-4">
                   <p className="font-medium mb-2">{selectedOffer.vendor_name}</p>
-                  <p className="text-2xl font-bold text-success mb-2">
+                  <p className="text-2xl font-bold text-emerald-300 mb-2">
                     {formatCurrency(selectedOffer.price)}
                   </p>
                   <p className="text-sm text-muted-foreground">{selectedOffer.description}</p>
@@ -746,7 +748,6 @@ export function LiveRace() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
       </main>
     </div>
   );

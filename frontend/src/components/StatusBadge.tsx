@@ -12,27 +12,27 @@ const statusConfig: Record<
   IN_PROGRESS: {
     label: "In Progress",
     className:
-      "border-secondary/50 bg-secondary/10 text-secondary",
+      "border-sky-300 bg-sky-300/30 text-sky-200",
   },
   REVIEW_REQUIRED: {
     label: "Review Required",
     className:
-      "border-warning/50 bg-warning/10 text-warning",
+      "border-amber-300 bg-amber-300/30 text-amber-200",
   },
   COMPLETED: {
     label: "Completed",
     className:
-      "border-success/50 bg-success/10 text-success",
+      "border-emerald-300 bg-emerald-300/30 text-emerald-200",
   },
   PENDING: {
     label: "Pending",
     className:
-      "border-muted-foreground/50 bg-muted text-muted-foreground",
+      "border-stone-400 bg-stone-400/30 text-stone-300",
   },
   ACCEPTED: {
     label: "Accepted",
     className:
-      "border-green-500/50 bg-green-500/10 text-green-500",
+      "border-emerald-300 bg-emerald-300/30 text-emerald-200",
   },
 };
 

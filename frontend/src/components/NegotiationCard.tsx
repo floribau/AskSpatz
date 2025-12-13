@@ -39,9 +39,9 @@ export function NegotiationCard({ negotiation }: NegotiationCardProps) {
               <p className="text-xs text-stone-400 mb-1">Status</p>
               <p className={`text-2xl font-bold ${
                 isRunning 
-                  ? "text-green-400" 
+                  ? "text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,0.8)]" 
                   : isCompleted 
-                  ? "text-blue-400" 
+                  ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]" 
                   : "text-white"
               }`}>
                 {isRunning
