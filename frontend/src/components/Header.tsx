@@ -14,7 +14,7 @@ export function Header({ onNewNegotiation }: HeaderProps) {
         <Link to="/" className="flex items-center gap-3">
           <SpatzIcon size={36} />
           <span className="text-xl font-semibold text-foreground">
-            askLio <span className="text-primary">Autonomy</span>
+            ask<span className="text-primary">Spatz</span>
           </span>
         </Link>
         <Button onClick={onNewNegotiation} className="gap-2">
