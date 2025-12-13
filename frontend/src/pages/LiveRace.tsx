@@ -71,9 +71,6 @@ export function LiveRace() {
         };
         
         if (isMounted) {
-          console.log("[LiveRace] Vendors:", data.vendors?.map((v: any) => ({ id: v.id, name: v.name })));
-          console.log("[LiveRace] Messages vendor_ids:", data.messages?.map((m: any) => m.vendor_id));
-          
           setNegotiation(negotiationDetail);
           setAllMessages(data.messages || []);
           setOffers(data.offers || []);
@@ -81,7 +78,6 @@ export function LiveRace() {
 
           // Auto-select the first vendor if none is selected
           if (!selectedVendorId && data.vendors && data.vendors.length > 0) {
-            console.log("[LiveRace] Auto-selecting vendor:", data.vendors[0].id);
             setSelectedVendorId(data.vendors[0].id);
           }
 

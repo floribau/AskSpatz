@@ -68,7 +68,13 @@ app.post("/api/negotiations/start", async (req, res) => {
       
       activeNegotiations.set(localNegotiationId, { agent, status: "initializing" });
       
-      await agent.initialize(vendorId, negotiationGroup.id);
+      // Pass product info to the agent
+      await agent.initialize(vendorId, negotiationGroup.id, {
+        name: productName || "Product",
+        quantity: quantity || 1,
+        startingPrice: startingPrice ? parseFloat(startingPrice) : undefined,
+        targetReduction: targetReduction ? parseFloat(targetReduction) : undefined,
+      });
       activeNegotiations.set(localNegotiationId, { agent, status: "running" });
       
       // Run the agent in the background
@@ -342,10 +348,6 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
         vendor_id: negotiation?.vendor_id?.toString() || null,
       };
     });
-    
-    console.log(`[API] Negotiations: ${JSON.stringify(negotiations?.map(n => ({ id: n.id, vendor_id: n.vendor_id, conv_id: n.conversation_id })))}`);
-    console.log(`[API] Vendors: ${JSON.stringify(formattedVendors.map(v => ({ id: v.id, name: v.name })))}`);
-    console.log(`[API] Messages: ${formattedMessages.length} total, vendor_ids: ${[...new Set(formattedMessages.map(m => m.vendor_id))].join(', ')}`);
 
     // Build the response
     const response = {

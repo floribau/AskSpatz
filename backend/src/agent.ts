@@ -7,12 +7,27 @@ import { supabase } from "./supabase.js";
 
 dotenv.config();
 
+interface ProductInfo {
+  name: string;
+  quantity: number;
+  startingPrice?: number;
+  targetReduction?: number;
+}
+
+interface VendorInfo {
+  id: number;
+  name: string;
+  behaviour: string | null;
+}
+
 class Agent {
   conversation_id: number | null = null;
   negotiation_id: number | null = null;
   negotiation_group_id: number | null = null;
   vendor_id: number | null = null;
   private agent: any = null;
+  private vendorInfo: VendorInfo | null = null;
+  private productInfo: ProductInfo | null = null;
   message_history: string[] = [];
 
   private createTools() {
@@ -142,18 +157,31 @@ class Agent {
     return [writeEmail, finishNegotiation];
   }
 
-  async initialize(vendorId: string = "8", negotiationGroupId: number): Promise<void> {
+  async initialize(
+    vendorId: string = "8", 
+    negotiationGroupId: number,
+    productInfo?: ProductInfo
+  ): Promise<void> {
     this.vendor_id = parseInt(vendorId) || 8;
     this.negotiation_group_id = negotiationGroupId;
+    this.productInfo = productInfo || null;
 
-    // Look up the external_vendor_id from our database
+    // Look up the vendor details from our database
     const { data: vendorData, error: vendorError } = await supabase
       .from("vendors")
-      .select("id, name, external_vendor_id")
+      .select("id, name, external_vendor_id, behaviour")
       .eq("id", this.vendor_id)
       .single();
 
     console.log(`[Agent] Looking up vendor ${this.vendor_id}:`, vendorData, vendorError?.message);
+
+    if (vendorData) {
+      this.vendorInfo = {
+        id: vendorData.id,
+        name: vendorData.name,
+        behaviour: vendorData.behaviour,
+      };
+    }
 
     const externalVendorId = vendorData?.external_vendor_id || 8; // Default to 8 if not found
     console.log(`[Agent] Using external_vendor_id: ${externalVendorId}`);
@@ -199,12 +227,54 @@ class Agent {
       console.log(`[Agent] Created negotiation record: ${this.negotiation_id}`);
     }
 
-    
+    // Build dynamic system prompt with vendor and product context
+    const dynamicPrompt = this.buildSystemPrompt();
+    console.log(`[Agent] System prompt includes vendor: ${this.vendorInfo?.name}, product: ${this.productInfo?.name}`);
+
     this.agent = await createAgent({
       model: "claude-haiku-4-5-20251001",
       tools: this.createTools(),
-      systemPrompt: systemPrompt,
+      systemPrompt: dynamicPrompt,
     });
+  }
+
+  private buildSystemPrompt(): string {
+    let contextSection = "\n\n## Current Negotiation Context\n";
+    
+    // Add vendor information
+    if (this.vendorInfo) {
+      contextSection += `\n### Vendor Information\n`;
+      contextSection += `- **Vendor Name**: ${this.vendorInfo.name}\n`;
+      if (this.vendorInfo.behaviour) {
+        contextSection += `- **Vendor Personality/Approach**: ${this.vendorInfo.behaviour}\n`;
+        contextSection += `- Use this knowledge about their negotiation style to tailor your approach accordingly.\n`;
+      }
+    }
+    
+    // Add product information
+    if (this.productInfo) {
+      contextSection += `\n### Product Requirements\n`;
+      contextSection += `- **Product**: ${this.productInfo.name}\n`;
+      contextSection += `- **Quantity**: ${this.productInfo.quantity} unit(s)\n`;
+      if (this.productInfo.startingPrice) {
+        contextSection += `- **Starting/List Price**: $${this.productInfo.startingPrice.toLocaleString()}\n`;
+      }
+      if (this.productInfo.targetReduction) {
+        contextSection += `- **Target Price Reduction**: ${this.productInfo.targetReduction}%\n`;
+        if (this.productInfo.startingPrice) {
+          const targetPrice = this.productInfo.startingPrice * (1 - this.productInfo.targetReduction / 100);
+          contextSection += `- **Target Price**: $${targetPrice.toLocaleString()}\n`;
+        }
+      }
+    }
+    
+    contextSection += `\n### Negotiation Objectives\n`;
+    contextSection += `- Secure the best possible price, ideally meeting or exceeding the target reduction\n`;
+    contextSection += `- Negotiate favorable payment terms, warranties, and service agreements\n`;
+    contextSection += `- Explore volume discounts, bundled offerings, and value-adds\n`;
+    contextSection += `- Maintain a professional relationship with the vendor for future business\n`;
+    
+    return systemPrompt + contextSection;
   }
 
   async invoke(message: string): Promise<any> {
