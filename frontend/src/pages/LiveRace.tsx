@@ -140,10 +140,6 @@ export function LiveRace() {
     );
   }
 
-  // Get latest price round for calculations
-  const latestRound =
-    negotiation.priceHistory[negotiation.priceHistory.length - 1];
-
   const handleSendMessage = (message: string) => {
     const newMessage: Message = {
       sender: "human",
@@ -174,20 +170,21 @@ export function LiveRace() {
     setShowIntervention(true);
   };
 
-  // Find best price
-  let lowestPrice = negotiation.startingPrice;
+  // Find best price from all price history (real data only)
+  let lowestPrice = Infinity;
   let winningVendor = "";
-  negotiation.vendors.forEach((vendor) => {
-    const price = latestRound?.[vendor.id] as number | undefined;
-    if (price && price < lowestPrice) {
-      lowestPrice = price;
-      winningVendor = vendor.company;
-    }
+  negotiation.priceHistory.forEach((round) => {
+    negotiation.vendors.forEach((vendor) => {
+      const price = round[vendor.id] as number | undefined;
+      if (price && price < lowestPrice) {
+        lowestPrice = price;
+        winningVendor = vendor.company;
+      }
+    });
   });
-  const savingsPercent = (
-    ((negotiation.startingPrice - lowestPrice) / negotiation.startingPrice) *
-    100
-  ).toFixed(1);
+  
+  // Count finished agents (unique vendor_ids in offers)
+  const finishedAgentsCount = new Set(offers.map(o => o.vendor_id)).size;
 
   return (
     <div className="min-h-screen bg-background">
@@ -228,30 +225,32 @@ export function LiveRace() {
                 <p className="text-sm text-muted-foreground mb-1">
                   Current Best Price
                 </p>
-                <p className="text-4xl font-bold text-success">
-                  {formatCurrency(lowestPrice)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {winningVendor} - {savingsPercent}% savings
-                </p>
+                {lowestPrice < Infinity ? (
+                  <>
+                    <p className="text-4xl font-bold text-success">
+                      {formatCurrency(lowestPrice)}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {winningVendor}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-2xl font-bold text-muted-foreground">
+                    Awaiting offers...
+                  </p>
+                )}
               </div>
-              <div className="grid grid-cols-3 gap-6 text-center">
-                <div>
-                  <p className="text-xs text-muted-foreground">Starting</p>
-                  <p className="text-lg font-semibold">
-                    {formatCurrency(negotiation.startingPrice)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Target</p>
-                  <p className="text-lg font-semibold text-primary">
-                    {formatCurrency(negotiation.targetPrice)}
-                  </p>
-                </div>
+              <div className="grid grid-cols-2 gap-6 text-center">
                 <div>
                   <p className="text-xs text-muted-foreground">Vendors</p>
                   <p className="text-lg font-semibold">
                     {negotiation.vendors.length}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Finished</p>
+                  <p className="text-lg font-semibold text-success">
+                    {finishedAgentsCount} / {negotiation.vendors.length}
                   </p>
                 </div>
               </div>
@@ -266,6 +265,7 @@ export function LiveRace() {
             vendors={negotiation.vendors}
             selectedVendorId={selectedVendorId}
             onVendorClick={setSelectedVendorId}
+            finishedVendorIds={offers.map(o => String(o.vendor_id))}
           />
           <CommunicationLog 
             messages={

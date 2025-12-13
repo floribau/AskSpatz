@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import { CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { SpatzIcon } from "./SpatzIcon";
 import { formatCurrency } from "@/lib/utils";
@@ -18,9 +19,10 @@ interface LiveRaceChartProps {
   vendors: Vendor[];
   selectedVendorId: string | null;
   onVendorClick: (vendorId: string | null) => void;
+  finishedVendorIds?: string[];
 }
 
-export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendorClick }: LiveRaceChartProps) {
+export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendorClick, finishedVendorIds = [] }: LiveRaceChartProps) {
   // Find the vendor with the lowest current price
   const latestRound = priceHistory[priceHistory.length - 1];
   let lowestPrice = Infinity;
@@ -123,12 +125,15 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
             const currentPrice = latestRound?.[vendor.id] as number | undefined;
             const isWinner = vendor.id === winningVendorId;
             const isSelected = selectedVendorId === vendor.id;
+            const isFinished = finishedVendorIds.includes(vendor.id);
             return (
               <button
                 key={vendor.id}
                 onClick={() => onVendorClick(vendor.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
-                  isSelected
+                  isFinished
+                    ? "bg-success/20 ring-2 ring-success"
+                    : isSelected
                     ? "ring-2 ring-primary bg-primary/10"
                     : isWinner
                     ? "bg-secondary/20 ring-2 ring-secondary hover:bg-secondary/30"
@@ -145,7 +150,8 @@ export function LiveRaceChart({ priceHistory, vendors, selectedVendorId, onVendo
                     {formatCurrency(currentPrice)}
                   </span>
                 )}
-                {isWinner && <SpatzIcon size={16} />}
+                {isFinished && <CheckCircle className="h-4 w-4 text-success" />}
+                {!isFinished && isWinner && <SpatzIcon size={16} />}
               </button>
             );
           })}
