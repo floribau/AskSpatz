@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy } from "lucide-react";
+import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy, Users } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
@@ -347,64 +347,68 @@ export function LiveRace() {
           </div>
         </div>
 
-        {/* Current Best Price Banner - Centered and compact */}
-        <Card className="mb-8 bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg w-full max-w-2xl mx-auto">
-          <CardContent className="py-3 px-4">
-            <div className="flex flex-col items-center gap-3">
-              {/* Best Price */}
-              <div className="text-center">
-                <p className="text-xs text-white/70 mb-1">
-                  Current Best Price
-                </p>
-                {lowestPrice < Infinity ? (
-                  <>
-                    <p className="text-2xl font-bold text-emerald-300">
+        {/* Main Content */}
+        <div className="space-y-6 mb-8">
+          {/* Small detail boxes above the chart */}
+          <div className="flex items-center justify-center gap-3">
+            {/* Best Price - Small box */}
+            <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-300" />
+                <div>
+                  <p className="text-[10px] text-white/70 leading-tight">Best Price</p>
+                  {lowestPrice < Infinity ? (
+                    <p className="text-sm font-bold text-emerald-300 leading-tight">
                       {formatCurrency(lowestPrice)}
                     </p>
-                    <p className="text-xs text-white/70 mt-1">
-                      {winningVendor}
+                  ) : (
+                    <p className="text-xs font-bold text-white/60 leading-tight">
+                      Awaiting...
                     </p>
-                  </>
-                ) : (
-                  <p className="text-lg font-bold text-white/60">
-                    Awaiting offers...
-                  </p>
-                )}
+                  )}
+                </div>
               </div>
+            </Card>
 
-              {/* Stats */}
-              <div className="flex items-center gap-6">
-                <div className="text-center">
-                  <p className="text-xs text-white/70">Vendors</p>
-                  <p className="text-sm font-semibold text-white">
+            {/* Vendors - Small box */}
+            <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-white/70" />
+                <div>
+                  <p className="text-[10px] text-white/70 leading-tight">Vendors</p>
+                  <p className="text-sm font-semibold text-white leading-tight">
                     {negotiation.vendors.length}
                   </p>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs text-white/70">Finished</p>
-                  <p className="text-sm font-semibold text-emerald-300">
-                    {finishedAgentsCount} / {negotiation.vendors.length}
+              </div>
+            </Card>
+
+            {/* Finished - Small box */}
+            <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-300" />
+                <div>
+                  <p className="text-[10px] text-white/70 leading-tight">Finished</p>
+                  <p className="text-sm font-semibold text-emerald-300 leading-tight">
+                    {finishedAgentsCount}/{negotiation.vendors.length}
                   </p>
                 </div>
               </div>
+            </Card>
 
-              {/* View All Offers button */}
-              {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
-                <Button 
-                  onClick={() => setShowOffersPanel(true)}
-                  size="sm"
-                  className="gap-2 bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
-                >
-                  <Trophy className="h-4 w-4" />
-                  View All Offers
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            {/* View All Offers button - Small */}
+            {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
+              <Button 
+                onClick={() => setShowOffersPanel(true)}
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-xs bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
+              >
+                <Trophy className="h-3 w-3" />
+                View Offers
+              </Button>
+            )}
+          </div>
 
-        {/* Main Content */}
-        <div className="space-y-6 mb-8">
           <LiveRaceChart
             priceHistory={negotiation.priceHistory}
             vendors={negotiation.vendors}
@@ -450,7 +454,7 @@ export function LiveRace() {
                                   {offer.pros.map((pro, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
                                       <span className="text-emerald-300">+</span>
-                                      <span>{pro}</span>
+                                      <span className="text-white/80">{pro}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -463,7 +467,7 @@ export function LiveRace() {
                                   {offer.cons.map((con, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
                                       <span className="text-rose-300">−</span>
-                                      <span>{con}</span>
+                                      <span className="text-white/80">{con}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -544,17 +548,17 @@ export function LiveRace() {
 
         {/* Offers Panel (Slide-out from right) */}
         <Sheet open={showOffersPanel} onOpenChange={setShowOffersPanel}>
-          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto bg-stone-900 border-stone-700">
             <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
+              <SheetTitle className="flex items-center gap-2 text-white">
                 <Trophy className="h-5 w-5 text-emerald-300" />
                 All Offers ({offers.length})
               </SheetTitle>
             </SheetHeader>
             {(isLoadingLabels || Object.keys(offerLabels).length === 0) ? (
               <div className="flex flex-col items-center justify-center py-16">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                <p className="text-sm text-muted-foreground">Analyzing offers...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-300 mb-4"></div>
+                <p className="text-sm text-white/70">Analyzing offers...</p>
               </div>
             ) : (
             <div className="mt-6 space-y-4">
@@ -588,10 +592,10 @@ export function LiveRace() {
                         isAccepted
                           ? "bg-emerald-300/20 border-emerald-300 ring-2 ring-emerald-300/50 shadow-lg cursor-default"
                           : isSelected
-                          ? "bg-primary/10 border-primary ring-2 ring-primary/50 shadow-lg cursor-pointer hover:bg-primary/15"
+                          ? "bg-sky-300/10 border-sky-300 ring-2 ring-sky-300/50 shadow-lg cursor-pointer hover:bg-sky-300/15"
                           : isClickable
-                          ? "bg-muted/30 cursor-pointer hover:bg-muted/50 border-border"
-                          : "bg-muted/30 cursor-default border-border"
+                          ? "bg-stone-800/50 cursor-pointer hover:bg-stone-800/70 border-stone-700"
+                          : "bg-stone-800/50 cursor-default border-stone-700"
                       }`}
                     >
                       {isAccepted && (
@@ -601,28 +605,28 @@ export function LiveRace() {
                         </div>
                       )}
                       {!isAccepted && isBestValue && (
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-primary/30">
-                          <Trophy className="h-5 w-5 text-primary" />
-                          <span className="text-sm font-semibold text-primary">Recommended Choice</span>
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-sky-300/30">
+                          <Trophy className="h-5 w-5 text-sky-300" />
+                          <span className="text-sm font-semibold text-sky-300">Recommended Choice</span>
                         </div>
                       )}
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <p className={`text-sm font-medium ${isBestValue ? "text-primary" : ""}`}>
+                            <p className={`text-sm font-medium ${isBestValue ? "text-sky-300" : "text-white"}`}>
                               {offer.vendor_name}
                             </p>
                             {label && (
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 isBestValue 
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-secondary text-secondary-foreground"
+                                  ? "bg-sky-300/20 text-sky-300 border border-sky-300/50"
+                                  : "bg-stone-700/50 text-white/70 border border-stone-600/50"
                               }`}>
                                 {label}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground break-words">
+                          <p className="text-sm text-white/70 break-words">
                             {offer.description}
                           </p>
                           {/* Pros and Cons */}
@@ -634,7 +638,7 @@ export function LiveRace() {
                                   {offer.pros.map((pro, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
                                       <span className="text-emerald-300">+</span>
-                                      <span>{pro}</span>
+                                      <span className="text-white/80">{pro}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -647,7 +651,7 @@ export function LiveRace() {
                                   {offer.cons.map((con, idx) => (
                                     <li key={idx} className="flex items-start gap-1">
                                       <span className="text-rose-300">−</span>
-                                      <span>{con}</span>
+                                      <span className="text-white/80">{con}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -656,7 +660,7 @@ export function LiveRace() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className={`text-2xl font-bold ${isBestValue ? "text-primary" : ""}`}>
+                          <p className={`text-2xl font-bold ${isBestValue ? "text-sky-300" : "text-white"}`}>
                             {formatCurrency(offer.price)}
                           </p>
                         </div>
@@ -669,10 +673,10 @@ export function LiveRace() {
             
             {/* Accept Offer Button - only show when no offer is accepted */}
             {!acceptedOfferId && selectedOfferId && offers.length > 0 && (
-              <div className="mt-6 pt-6 border-t">
+              <div className="mt-6 pt-6 border-t border-stone-700">
                 <Button
                   onClick={() => setShowAcceptConfirm(true)}
-                  className="w-full"
+                  className="w-full bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
                   size="lg"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -685,10 +689,10 @@ export function LiveRace() {
         
         {/* Confirmation Dialog */}
         <Dialog open={showAcceptConfirm} onOpenChange={setShowAcceptConfirm}>
-          <DialogContent>
+          <DialogContent className="bg-stone-900 border-stone-700 text-white">
             <DialogHeader>
-              <DialogTitle>Accept Offer</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-white">Accept Offer</DialogTitle>
+              <DialogDescription className="text-white/70">
                 Are you sure you want to accept this offer? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
@@ -696,16 +700,16 @@ export function LiveRace() {
               const selectedOffer = offers.find(o => o.id === selectedOfferId);
               return selectedOffer ? (
                 <div className="py-4">
-                  <p className="font-medium mb-2">{selectedOffer.vendor_name}</p>
+                  <p className="font-medium mb-2 text-white">{selectedOffer.vendor_name}</p>
                   <p className="text-2xl font-bold text-emerald-300 mb-2">
                     {formatCurrency(selectedOffer.price)}
                   </p>
-                  <p className="text-sm text-muted-foreground">{selectedOffer.description}</p>
+                  <p className="text-sm text-white/70">{selectedOffer.description}</p>
                 </div>
               ) : null;
             })()}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAcceptConfirm(false)}>
+              <Button variant="outline" onClick={() => setShowAcceptConfirm(false)} className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-800/50">
                 Cancel
               </Button>
               <Button
@@ -742,6 +746,7 @@ export function LiveRace() {
                     });
                   }
                 }}
+                className="bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
               >
                 Confirm
               </Button>
