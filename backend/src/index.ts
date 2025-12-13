@@ -263,7 +263,6 @@ app.get("/api/negotiation-groups", async (req, res) => {
         product,
         quantity,
         status,
-        created_at,
         negotiation (id, vendor_id)
       `)
       .order("id", { ascending: false });
@@ -282,7 +281,7 @@ app.get("/api/negotiation-groups", async (req, res) => {
       savings_percent: 0, // Can be calculated
       status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
       vendors_engaged: Array.isArray(group.negotiation) ? group.negotiation.length : 0,
-      created_at: group.created_at || new Date().toISOString(),
+      created_at: new Date().toISOString(),
     }));
 
     res.json(formattedGroups);
