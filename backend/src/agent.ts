@@ -270,7 +270,7 @@ class Agent {
 
     // Build dynamic system prompt with vendor and product context
     const dynamicPrompt = this.buildSystemPrompt();
-    console.log(`[Agent] System prompt includes vendor: ${this.vendorInfo?.name}, product: ${this.productInfo?.name}`);
+    console.log(`[Agent] System prompt: ${dynamicPrompt}`);
 
     this.agent = await createAgent({
       model: "claude-haiku-4-5-20251001",
