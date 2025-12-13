@@ -16,18 +16,18 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
   );
 
   return (
-    <Card className="bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
+    <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
       <CardHeader>
         <CardTitle className="text-white">Negotiation Transcript</CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs value={selectedVendorId || ""} onValueChange={setSelectedVendorId} className="w-full">
-          <TabsList className="bg-gray-800 mb-4 w-full justify-start">
+          <TabsList className="bg-stone-800 mb-4 w-full justify-start">
             {vendors.map((vendor) => (
               <TabsTrigger
                 key={vendor.id}
                 value={vendor.id}
-                className="text-white/70 data-[state=active]:bg-gray-700 data-[state=active]:text-white px-4 py-2 cursor-pointer hover:bg-gray-700/50 transition-colors"
+                className="text-white/70 data-[state=active]:bg-stone-700 data-[state=active]:text-white px-4 py-2 cursor-pointer hover:bg-stone-700/50 transition-colors"
               >
                 {vendor.company}
               </TabsTrigger>
@@ -51,7 +51,7 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
                           message.sender === "agent" &&
                             "bg-blue-500/20 border border-blue-500/30",
                           message.sender === "vendor" &&
-                            "bg-gray-800/80 border border-gray-700/50",
+                            "bg-stone-800/80 border border-stone-700/50",
                           message.sender === "human" &&
                             "bg-purple-500/20 border border-purple-500/30 ml-8"
                         )}

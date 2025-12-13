@@ -1,21 +1,47 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { NegotiationCard } from "@/components/NegotiationCard";
+import { VendorCard } from "@/components/VendorCard";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { ArrowRight } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Vendor {
+  id: string;
+  name: string;
+  company: string;
+  color: string;
+  category: string;
+  behaviour?: string | null;
+}
 
 export function Index() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [typingText, setTypingText] = useState("");
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editedBehaviour, setEditedBehaviour] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const userName = "Spatz"; // TODO: Replace with actual logged-in user name
   
   const examples = [
@@ -42,6 +68,24 @@ export function Index() {
       }
     }
     fetchNegotiations();
+  }, []);
+
+  useEffect(() => {
+    async function fetchVendors() {
+      try {
+        const response = await fetch("http://localhost:3001/api/vendors");
+        if (!response.ok) {
+          throw new Error("Failed to fetch vendors");
+        }
+        const data = await response.json();
+        setVendors(data);
+      } catch (error) {
+        console.error("Error fetching vendors:", error);
+      } finally {
+        setIsLoadingVendors(false);
+      }
+    }
+    fetchVendors();
   }, []);
 
   // Auto-resize textarea
@@ -97,7 +141,7 @@ export function Index() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             vendorIds: ["56", "57", "58"],
-            negotiationName: "Natural Language Negotiation",
+            negotiationName: "Negotiation",
             productName: inputValue.trim().substring(0, 50),
             userRequest: inputValue.trim(),
           }),
@@ -125,6 +169,51 @@ export function Index() {
     }
   };
 
+  const handleVendorClick = (vendor: Vendor) => {
+    setSelectedVendor(vendor);
+    setEditedBehaviour(vendor.behaviour || "");
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveBehaviour = async () => {
+    if (!selectedVendor) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/vendors/${selectedVendor.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ behaviour: editedBehaviour }),
+      });
+
+      if (response.ok) {
+        // Update the vendor in the local state
+        setVendors((prev) =>
+          prev.map((v) =>
+            v.id === selectedVendor.id ? { ...v, behaviour: editedBehaviour } : v
+          )
+        );
+        toast({
+          title: "Vendor updated",
+          description: `Behavior for ${selectedVendor.name} has been updated.`,
+          variant: "success",
+        });
+        setIsEditModalOpen(false);
+      } else {
+        throw new Error("Failed to update vendor");
+      }
+    } catch (error) {
+      console.error("Error updating vendor:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update vendor behavior.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
   return (
     <div 
@@ -143,7 +232,7 @@ export function Index() {
             <div className="flex items-center justify-center gap-3 mb-4">
               <SpatzIcon size={48} />
               <h1 className="text-4xl font-bold text-white">
-                ask<span className="text-gray-900">Spatz</span>
+                ask<span className="text-stone-900">Spatz</span>
               </h1>
             </div>
             <p className="text-white/80">
@@ -169,7 +258,7 @@ export function Index() {
                 onKeyDown={handleKeyDown}
                 placeholder=""
                 disabled={isSubmitting}
-                className="w-full min-h-[120px] px-6 py-4 pr-20 text-white text-lg bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all disabled:opacity-50"
+                className="w-full min-h-[120px] px-6 py-4 pr-20 text-white text-lg bg-stone-900/80 backdrop-blur-md border border-stone-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-stone-600 focus:border-stone-600 transition-all disabled:opacity-50"
                 style={{ 
                   fontFamily: 'inherit',
                   lineHeight: '1.5'
@@ -185,7 +274,7 @@ export function Index() {
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || isSubmitting}
                 size="sm"
-                className="absolute bottom-4 right-4 h-8 px-3 bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute bottom-4 right-4 h-8 px-3 bg-stone-700 hover:bg-stone-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -204,36 +293,134 @@ export function Index() {
             </Button>
           </div>
 
-          {/* Dark gray tile container for negotiations */}
-          <div className="bg-gray-900/80 rounded-t-2xl mt-64 p-6 md:p-8">
-            {isLoading ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  Loading negotiations...
-                </p>
+          {/* Dark gray tile container for negotiations and vendors */}
+          <div className="bg-stone-900/80 rounded-t-2xl mt-64 p-6 md:p-8">
+            <div className="space-y-12">
+              {/* Negotiations Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-white">Negotiations</h2>
+                  {negotiations.length > 3 && (
+                    <Button
+                      onClick={() => navigate("/all-negotiations")}
+                      variant="outline"
+                      size="sm"
+                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-800/50"
+                    >
+                      Browse All ({negotiations.length})
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
+                </div>
+                {isLoading ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      Loading negotiations...
+                    </p>
+                  </div>
+                ) : negotiations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      No negotiations yet
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Start a new negotiation to see it here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                    {negotiations.slice(0, 3).map((negotiation) => (
+                      <NegotiationCard
+                        key={negotiation.id}
+                        negotiation={negotiation}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : negotiations.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">
-                  No negotiations yet
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Start a new negotiation to see it here
-                </p>
+
+              {/* Vendors Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-white">Vendors</h2>
+                  {vendors.length > 3 && (
+                    <Button
+                      onClick={() => navigate("/all-vendors")}
+                      variant="outline"
+                      size="sm"
+                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-800/50"
+                    >
+                      Browse All ({vendors.length})
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
+                </div>
+                {isLoadingVendors ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      Loading vendors...
+                    </p>
+                  </div>
+                ) : vendors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      No vendors available
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                    {vendors.slice(0, 3).map((vendor) => (
+                      <VendorCard
+                        key={vendor.id}
+                        vendor={vendor}
+                        onClick={() => handleVendorClick(vendor)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                {negotiations.map((negotiation) => (
-                  <NegotiationCard
-                    key={negotiation.id}
-                    negotiation={negotiation}
-                  />
-                ))}
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Edit Vendor Behavior Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="bg-stone-900 border-stone-700 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Edit Behavior: {selectedVendor?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium text-white/70 mb-2 block">
+              Behavior Description
+            </label>
+            <Textarea
+              value={editedBehaviour}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditedBehaviour(e.target.value)}
+              placeholder="Enter vendor behavior description..."
+              className="min-h-[200px] bg-stone-800 border-stone-700 text-white placeholder:text-stone-500"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveBehaviour}
+              disabled={isSaving}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

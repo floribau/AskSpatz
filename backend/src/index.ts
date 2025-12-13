@@ -255,6 +255,35 @@ app.get("/api/vendors", async (req, res) => {
   }
 });
 
+// Update vendor behavior
+app.put("/api/vendors/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { behaviour } = req.body;
+
+    if (behaviour === undefined) {
+      return res.status(400).json({ error: "behaviour is required" });
+    }
+
+    const { data, error } = await supabase
+      .from("vendors")
+      .update({ behaviour: behaviour || null })
+      .eq("id", parseInt(id))
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[API] Error updating vendor:", error.message);
+      return res.status(500).json({ error: "Failed to update vendor" });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error("[API] Error updating vendor:", err);
+    res.status(500).json({ error: "Failed to update vendor" });
+  }
+});
+
 // Get all negotiation groups
 app.get("/api/negotiation-groups", async (req, res) => {
   try {
