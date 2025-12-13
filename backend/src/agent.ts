@@ -1,17 +1,21 @@
 import { createAgent, tool } from "langchain";
 import * as z from "zod";
 import dotenv from "dotenv";
+import { initChatModel, HumanMessage, SystemMessage } from "langchain";
+import systemPrompt from "./prompt.js";
 
 dotenv.config();
 
 class Agent {
   conversation_id: number | null = null;
   private agent: any = null;
+  message_history: string[] = [];
 
   private createTools() {
     const writeEmail = tool(
       async ({ body }: { body: string }): Promise<string> => {
         console.log(`[writeEmail] conversation_id: ${this.conversation_id}`);
+        console.log(`[writeEmail] body: ${body}`);
         
         if (!this.conversation_id) {
           return "Error: No conversation_id set; cannot send message.";
@@ -38,6 +42,7 @@ class Agent {
 
           const data = await response.json();
           console.log(`[writeEmail] Message sent successfully to conversation ${this.conversation_id}`);
+          console.log(`[writeEmail] data: ${data.content}`);
           return data.content;
         } catch (err) {
           return `Error sending message: ${err}`;
@@ -51,8 +56,24 @@ class Agent {
         }),
       },
     );
-
-    return [writeEmail];
+    const finishNegotiation = tool(
+      async ({ offers }: { offers: { description: string, price: number }[] }): Promise<string> => {
+        console.log(`[finishNegotiation] conversation_id: ${this.conversation_id}`);
+        console.log(`[finishNegotiation] offers: ${JSON.stringify(offers)}`);
+        return JSON.stringify(offers);
+      },
+      {
+        name: "finish_negotiation",
+        description: "When you are satisfied with the offer(s) the vendor has made, use this tool to finish the negotiation.",
+        schema: z.object({
+          offers: z.array(z.object({
+            description: z.string().describe("A short description about the terms and conditions of the offer."),
+            price: z.number().describe("The price of the offer."),
+          })).describe("The offers the vendor has made."),
+        }),
+      },
+    );
+    return [writeEmail, finishNegotiation];
   }
 
   async initialize(): Promise<void> {
@@ -79,10 +100,10 @@ class Agent {
     console.log("Created conversation:", conversationData);
     this.conversation_id = conversationData.id;
 
-    // Create the agent with tools
     this.agent = await createAgent({
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-haiku-4-5-20251001",
       tools: this.createTools(),
+      systemPrompt: systemPrompt,
     });
   }
 
@@ -102,9 +123,28 @@ class Agent {
 async function run_agent(): Promise<void> {
   const agent = new Agent();
   await agent.initialize();
+  let i = 0;
+  let user_message = "";
 
-  const response = await agent.invoke("Write a welcome email.");
-  console.log(response);
+  while (true) {
+    if (i === 0) {
+      user_message = "kickoff negotiations for buying a coffee machine: Maverick Gravimetric 3gr";
+    } else {
+      user_message = "continue negotiating";
+    }
+    console.log(`[run_agent] user_message: ${user_message}`);
+    const response = await agent.invoke(user_message);
+    const hasFinishNegotiation = response.messages?.some(
+      (msg: any) => msg.name === "finish_negotiation"
+    );
+    
+    if (hasFinishNegotiation) {
+      console.log("[run_agent] Negotiation finished!");
+      break;
+    }
+    
+    i++;
+  }
 }
 
 export { Agent };
