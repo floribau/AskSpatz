@@ -41,6 +41,7 @@ export function LiveRace() {
   const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
   const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [expandedOffers, setExpandedOffers] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!id) return;
@@ -303,6 +304,26 @@ export function LiveRace() {
   // Count finished agents (unique vendor_ids in offers)
   const finishedAgentsCount = new Set(offers.map(o => o.vendor_id)).size;
 
+  // Helper function to truncate description to first few words
+  const truncateDescription = (text: string, wordCount: number = 16): string => {
+    const words = text.split(' ');
+    if (words.length <= wordCount) return text;
+    return words.slice(0, wordCount).join(' ');
+  };
+
+  const toggleOfferExpansion = (offerId: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when clicking expand button
+    setExpandedOffers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(offerId)) {
+        newSet.delete(offerId);
+      } else {
+        newSet.add(offerId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div 
       className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
@@ -444,7 +465,31 @@ export function LiveRace() {
                           <p className="text-sm font-medium text-white/70 mb-1">
                             {offer.vendor_name}
                           </p>
-                          <p className="text-sm break-words text-white/70">{offer.description}</p>
+                          <div className="text-sm break-words text-white/70">
+                            {expandedOffers.has(offer.id) ? (
+                              <>
+                                {offer.description}
+                                <button
+                                  onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                  className="ml-1 text-white/60 hover:text-white/80 underline"
+                                >
+                                  ... show less
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {truncateDescription(offer.description)}
+                                {offer.description.split(' ').length > 16 && (
+                                  <button
+                                    onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                    className="ml-1 text-white/60 hover:text-white/80 underline"
+                                  >
+                                    ...
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
                           {/* Pros and Cons */}
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
@@ -548,7 +593,7 @@ export function LiveRace() {
 
         {/* Offers Panel (Slide-out from right) */}
         <Sheet open={showOffersPanel} onOpenChange={setShowOffersPanel}>
-          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto bg-stone-900 border-stone-700">
+          <SheetContent className="w-[800px] sm:w-[900px] overflow-y-auto bg-stone-900 border-stone-700">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2 text-white">
                 <Trophy className="h-5 w-5 text-emerald-300" />
@@ -588,7 +633,7 @@ export function LiveRace() {
                           hasUserSelectedOffer.current = true; // Mark that user has manually selected
                         }
                       }}
-                      className={`p-4 border rounded-lg transition-all ${
+                      className={`p-4 border rounded-lg transition-all relative ${
                         isAccepted
                           ? "bg-emerald-300/20 border-emerald-300 ring-2 ring-emerald-300/50 shadow-lg cursor-default"
                           : isSelected
@@ -597,17 +642,30 @@ export function LiveRace() {
                           ? "bg-stone-800/50 cursor-pointer hover:bg-stone-800/70 border-stone-700"
                           : "bg-stone-800/50 cursor-default border-stone-700"
                       }`}
-                    >
-                      {isAccepted && (
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-emerald-300/30">
-                          <CheckCircle className="h-5 w-5 text-emerald-300" />
-                          <span className="text-sm font-semibold text-emerald-300">Accepted Offer</span>
+                      >
+                      {label ? (
+                        <div className={`flex items-center gap-2 mb-3 pb-2 border-b ${
+                          isBestValue 
+                            ? "border-sky-300/30"
+                            : isAccepted
+                            ? "border-emerald-300/30"
+                            : "border-stone-600/30"
+                        }`}>
+                          {isBestValue && <Trophy className="h-5 w-5 text-sky-300" />}
+                          {isAccepted && <CheckCircle className="h-5 w-5 text-emerald-300" />}
+                          <span className={`text-sm font-semibold ${
+                            isBestValue 
+                              ? "text-sky-300"
+                              : isAccepted
+                              ? "text-emerald-300"
+                              : "text-white/70"
+                          }`}>
+                            {label}
+                          </span>
                         </div>
-                      )}
-                      {!isAccepted && isBestValue && (
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-sky-300/30">
-                          <Trophy className="h-5 w-5 text-sky-300" />
-                          <span className="text-sm font-semibold text-sky-300">Recommended Choice</span>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-stone-600/30">
+                          <span className="text-sm font-semibold text-white/70">Alternative</span>
                         </div>
                       )}
                       <div className="flex items-start justify-between gap-4">
@@ -616,19 +674,32 @@ export function LiveRace() {
                             <p className={`text-sm font-medium ${isBestValue ? "text-sky-300" : "text-white"}`}>
                               {offer.vendor_name}
                             </p>
-                            {label && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                isBestValue 
-                                  ? "bg-sky-300/20 text-sky-300 border border-sky-300/50"
-                                  : "bg-stone-700/50 text-white/70 border border-stone-600/50"
-                              }`}>
-                                {label}
-                              </span>
+                          </div>
+                          <div className="text-sm text-white/70 break-words">
+                            {expandedOffers.has(offer.id) ? (
+                              <>
+                                {offer.description}
+                                <button
+                                  onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                  className="ml-1 text-white/60 hover:text-white/80 underline"
+                                >
+                                  ... show less
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {truncateDescription(offer.description)}
+                                {offer.description.split(' ').length > 16 && (
+                                  <button
+                                    onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                    className="ml-1 text-white/60 hover:text-white/80 underline"
+                                  >
+                                    ...
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
-                          <p className="text-sm text-white/70 break-words">
-                            {offer.description}
-                          </p>
                           {/* Pros and Cons */}
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
