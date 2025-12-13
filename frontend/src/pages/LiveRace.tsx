@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign } from "lucide-react";
-import { Header } from "@/components/Header";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
@@ -131,8 +130,28 @@ export function LiveRace() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <Header onNewNegotiation={() => navigate("/new")} />
-        <main className="container px-4 md:px-6 py-8 text-center relative z-10">
+        {/* Top bar with back button and centered logo */}
+        <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
+          {/* Back button - top left */}
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
+          </Button>
+          
+          {/* Logo - centered */}
+          <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
+            <SpatzIcon size={36} />
+            <span className="text-xl font-semibold text-white">
+              ask<span className="text-gray-400">Spatz</span>
+            </span>
+          </Link>
+          
+          {/* Spacer for balance */}
+          <div className="w-20"></div>
+        </div>
+        <main className="w-full h-[calc(100vh-4rem)] flex items-center justify-center relative z-10">
           <p className="text-lg text-white/80">Loading negotiation...</p>
         </main>
       </div>
@@ -150,7 +169,27 @@ export function LiveRace() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <Header onNewNegotiation={() => navigate("/new")} />
+        {/* Top bar with back button and centered logo */}
+        <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
+          {/* Back button - top left */}
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
+          </Button>
+          
+          {/* Logo - centered */}
+          <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
+            <SpatzIcon size={36} />
+            <span className="text-xl font-semibold text-white">
+              ask<span className="text-gray-400">Spatz</span>
+            </span>
+          </Link>
+          
+          {/* Spacer for balance */}
+          <div className="w-20"></div>
+        </div>
         <main className="container px-4 md:px-6 py-8 text-center relative z-10">
           <p className="text-lg text-white/80">Negotiation not found</p>
           <Button asChild className="mt-4">
@@ -217,26 +256,35 @@ export function LiveRace() {
         backgroundRepeat: 'no-repeat'
       }}
     >
-      <Header onNewNegotiation={() => navigate("/new")} />
+      {/* Top bar with back button and centered logo */}
+      <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
+        {/* Back button - top left */}
+        <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+          <Link to="/">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Link>
+        </Button>
+        
+        {/* Logo - centered */}
+        <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
+          <SpatzIcon size={36} />
+          <span className="text-xl font-semibold text-white">
+            ask<span className="text-gray-400">Spatz</span>
+          </span>
+        </Link>
+        
+        {/* Spacer for balance */}
+        <div className="w-20"></div>
+      </div>
 
       <main className="w-full px-4 md:px-6 py-8 relative z-10">
-        {/* Back Link & Title */}
-        <div className="flex items-center justify-start gap-4 mb-6">
-          <Button asChild variant="ghost" size="sm" className="text-white/80 hover:text-white">
-            <Link to="/">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
-        </div>
 
+        {/* Title */}
         <div className="flex flex-col items-center gap-4 mb-8 text-center">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-2">
-              {negotiation.productName || negotiation.title}
-            </h1>
-            <p className="text-white/80">{negotiation.title}</p>
-          </div>
+          <h1 className="text-3xl font-bold text-white">
+            {negotiation.productName || negotiation.title}
+          </h1>
           <StatusBadge status={negotiation.status} />
         </div>
 
