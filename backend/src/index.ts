@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
-import setup_vendors from "./setupVendors.js";
+import setupVendors from "./setupVendors.js";
 import { CallbackHandler } from "@langfuse/langchain";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { LangfuseSpanProcessor } from "@langfuse/otel";
@@ -36,7 +36,7 @@ async function testSupabaseConnection() {
 }
 
 testSupabaseConnection();
-setup_vendors();
+// setupVendors();
 
 // Store active negotiations
 const activeNegotiations = new Map<string, { agent: Agent; status: string }>();

@@ -62,7 +62,7 @@ function readDocument(document: Document): void {
 /**
  * Setup method that fetches vendors and processes their documents
  */
-async function setup(): Promise<void> {
+async function setupVendors(): Promise<void> {
   const apiBaseUrl = "https://negbot-backend-ajdxh9axb0ddb0e9.westeurope-01.azurewebsites.net";
   
   try {
@@ -90,6 +90,6 @@ async function setup(): Promise<void> {
   }
 }
 
-export { setup, readDocument as read_document };
-export default setup;
+export { setupVendors, readDocument as read_document };
+export default setupVendors;
 
