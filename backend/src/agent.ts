@@ -90,8 +90,19 @@ class Agent {
             console.error("[writeEmail] Failed to save user message:", userMsgError.message);
           }
 
-          // Return the vendor's response
-          return data.content;
+          // Get competitive leverage and append to vendor's response
+          const competitiveOffer = await this.getCompetitiveLeverage();
+          const currentBestOffer = await this.getCurrentBestOffer();
+          
+          let vendorResponse = data.content;
+          
+          if (competitiveOffer && currentBestOffer && competitiveOffer.price < currentBestOffer.price) {
+            vendorResponse += `\n\n[COMPETITIVE LEVERAGE] You have received a better offer from another vendor in this negotiation group: Price $${competitiveOffer.price.toLocaleString()}, Conditions: ${competitiveOffer.description}. You can use this as leverage (anonymously - mention only the price and conditions, never the vendor name) to negotiate a better deal.`;
+            console.log(`[writeEmail] Added competitive leverage: $${competitiveOffer.price} vs current best: $${currentBestOffer.price}`);
+          }
+
+          // Return the vendor's response with leverage context
+          return vendorResponse;
         } catch (err) {
           return `Error sending message: ${err}`;
         }
@@ -467,7 +478,7 @@ class Agent {
 
     const response = await this.agent.invoke(
       {
-        messages: [{ role: "user", content: message + leverageContext }],
+        messages: [{ role: "user", content: message }],
       },
       invokeOptions
     );

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
 import { NegotiationCard } from "@/components/NegotiationCard";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { Negotiation } from "@/data/types";
@@ -38,48 +37,61 @@ export function Index() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="w-full px-4 md:px-6 pt-8 pb-8">
-        <div className="max-w-6xl mx-auto">
+    <div 
+      className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{
+        backgroundImage: 'url(/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <main className="w-full px-4 md:px-6 pt-8 pb-8 relative z-10">
+        <div className="w-full mx-auto">
           {/* Centered header section with logo */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-12">
             <div className="flex items-center justify-center gap-3 mb-4">
               <SpatzIcon size={48} />
-              <h1 className="text-4xl font-bold text-foreground">
-                ask<span className="text-primary">Spatz</span>
+              <h1 className="text-4xl font-bold text-white">
+                ask<span className="text-gray-900">Spatz</span>
               </h1>
             </div>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-white/80">
               Monitor and manage your autonomous procurement negotiations in
               real-time.
             </p>
+          </div>
+
+          {/* Main content: Large centered Start Negotiation button */}
+          <div className="flex justify-center items-center my-32">
             <Button 
               onClick={() => navigate("/new")} 
               size="lg" 
-              className="gap-2"
+              className="text-4xl px-24 py-12 h-auto font-semibold bg-gray-900/80 backdrop-blur-md hover:bg-gray-900/90 text-white border border-gray-700/50 shadow-lg transition-all min-w-[400px]"
             >
-              <Plus className="h-5 w-5" />
-              Start New Negotiation
+              Ready to negotiate?
             </Button>
           </div>
 
-          <Tabs defaultValue="active" className="space-y-6">
-            <div className="flex justify-center">
-              <TabsList className="w-full max-w-md">
-                <TabsTrigger 
-                  value="active" 
-                  className="flex-1 whitespace-nowrap text-sm font-medium px-2 sm:px-3"
-                >
-                  Active ({activeNegotiations.length})
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="completed" 
-                  className="flex-1 whitespace-nowrap text-sm font-medium px-2 sm:px-3"
-                >
-                  Completed ({completedNegotiations.length})
-                </TabsTrigger>
-              </TabsList>
-            </div>
+          {/* Dark gray tile container for negotiations */}
+          <div className="bg-gray-900 rounded-t-2xl mt-64 p-6 md:p-8">
+            <Tabs defaultValue="active" className="space-y-6">
+              <div className="flex justify-start">
+                <TabsList className="bg-gray-800">
+                  <TabsTrigger 
+                    value="active" 
+                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
+                  >
+                    Active ({activeNegotiations.length})
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="completed" 
+                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
+                  >
+                    Completed ({completedNegotiations.length})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
             <TabsContent value="active" className="space-y-4">
               {isLoading ? (
@@ -136,7 +148,8 @@ export function Index() {
                 </div>
               )}
             </TabsContent>
-          </Tabs>
+            </Tabs>
+          </div>
         </div>
       </main>
     </div>

@@ -3,6 +3,17 @@ import cors from "cors";
 import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
 import setup_vendors from "./setupVendors.js";
+import { CallbackHandler } from "@langfuse/langchain";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+ 
+const sdk = new NodeSDK({
+  spanProcessors: [new LangfuseSpanProcessor()],
+});
+ 
+sdk.start();
+// Initialize the Langfuse CallbackHandler
+const langfuseHandler = new CallbackHandler();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -115,7 +126,7 @@ async function runAgentForVendor(agent: Agent, localNegotiationId: string, produ
   try {
     while (true) {
       if (i === 0) {
-        userMessage = `kickoff negotiations for buying: ${productName || "a coffee machine: Maverick Gravimetric 3gr"}`;
+        userMessage = `kickoff negotiations"}`;
       } else {
         userMessage = "continue negotiating";
       }
