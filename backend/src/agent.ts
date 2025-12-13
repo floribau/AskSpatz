@@ -90,7 +90,42 @@ class Agent {
     const finishNegotiation = tool(
       async ({ offers }: { offers: { description: string, price: number }[] }): Promise<string> => {
         console.log(`[finishNegotiation] conversation_id: ${this.conversation_id}`);
+        console.log(`[finishNegotiation] negotiation_id: ${this.negotiation_id}`);
         console.log(`[finishNegotiation] offers: ${JSON.stringify(offers)}`);
+
+        // Insert offers into the database
+        if (this.negotiation_id) {
+          for (const offer of offers) {
+            const { error } = await supabase
+              .from("offer")
+              .insert({
+                negotiation_id: this.negotiation_id,
+                description: offer.description,
+                price: offer.price,
+              });
+
+            if (error) {
+              console.error("[finishNegotiation] Failed to save offer:", error.message);
+            } else {
+              console.log(`[finishNegotiation] Saved offer: ${offer.description} - $${offer.price}`);
+            }
+          }
+
+          // Update negotiation_group status to 'finished'
+          if (this.negotiation_group_id) {
+            const { error: groupError } = await supabase
+              .from("negotiation_group")
+              .update({ status: "finished" })
+              .eq("id", this.negotiation_group_id);
+
+            if (groupError) {
+              console.error("[finishNegotiation] Failed to update group status:", groupError.message);
+            } else {
+              console.log(`[finishNegotiation] Updated negotiation group ${this.negotiation_group_id} status to 'finished'`);
+            }
+          }
+        }
+
         return JSON.stringify(offers);
       },
       {
