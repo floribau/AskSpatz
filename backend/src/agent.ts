@@ -10,6 +10,7 @@ dotenv.config();
 class Agent {
   conversation_id: number | null = null;
   negotiation_id: number | null = null;
+  negotiation_group_id: number | null = null;
   vendor_id: number | null = null;
   private agent: any = null;
   message_history: string[] = [];
@@ -25,6 +26,19 @@ class Agent {
         }
 
         try {
+          // Save the agent's message to the database
+          const { error: assistantMsgError } = await supabase
+            .from("message")
+            .insert({
+              type: "assistant",
+              message: body,
+              conversation_id: this.conversation_id,
+            });
+
+          if (assistantMsgError) {
+            console.error("[writeEmail] Failed to save assistant message:", assistantMsgError.message);
+          }
+
           const response = await fetch(
             `https://negbot-backend-ajdxh9axb0ddb0e9.westeurope-01.azurewebsites.net/api/messages/${this.conversation_id}`,
             {
@@ -46,6 +60,20 @@ class Agent {
           const data = await response.json();
           console.log(`[writeEmail] Message sent successfully to conversation ${this.conversation_id}`);
           console.log(`[writeEmail] data: ${data.content}`);
+
+          // Save the vendor's response to the database
+          const { error: userMsgError } = await supabase
+            .from("message")
+            .insert({
+              type: "user",
+              message: data.content,
+              conversation_id: this.conversation_id,
+            });
+
+          if (userMsgError) {
+            console.error("[writeEmail] Failed to save user message:", userMsgError.message);
+          }
+
           return data.content;
         } catch (err) {
           return `Error sending message: ${err}`;
@@ -79,17 +107,30 @@ class Agent {
     return [writeEmail, finishNegotiation];
   }
 
-  async initialize(vendorId: string = "8", negotiationGroupId?: number): Promise<void> {
+  async initialize(vendorId: string = "8", negotiationGroupId: number): Promise<void> {
     this.vendor_id = parseInt(vendorId) || 8;
+    this.negotiation_group_id = negotiationGroupId;
 
-    // Create a new conversation
+    // Look up the external_vendor_id from our database
+    const { data: vendorData, error: vendorError } = await supabase
+      .from("vendors")
+      .select("id, name, external_vendor_id")
+      .eq("id", this.vendor_id)
+      .single();
+
+    console.log(`[Agent] Looking up vendor ${this.vendor_id}:`, vendorData, vendorError?.message);
+
+    const externalVendorId = vendorData?.external_vendor_id || 8; // Default to 8 if not found
+    console.log(`[Agent] Using external_vendor_id: ${externalVendorId}`);
+
+    // Create a new conversation with the external API
     const conversationCreateResponse = await fetch(
       "https://negbot-backend-ajdxh9axb0ddb0e9.westeurope-01.azurewebsites.net/api/conversations/?team_id=220239",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vendor_id: this.vendor_id,
+          vendor_id: externalVendorId,
           title: "Price Negotiation - Q4 Order"
         })
       }
