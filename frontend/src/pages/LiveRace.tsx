@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -33,9 +33,14 @@ export function LiveRace() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [allMessages, setAllMessages] = useState<Message[]>([]);
+  const hasInitializedSelection = useRef(false);
 
   useEffect(() => {
     if (!id) return;
+
+    // Reset initialization flag and selection when negotiation ID changes
+    hasInitializedSelection.current = false;
+    setSelectedVendorId(null);
 
     let intervalId: NodeJS.Timeout | null = null;
     let isMounted = true;
@@ -79,10 +84,10 @@ export function LiveRace() {
           setOffers(data.offers || []);
           setIsLoading(false);
 
-          // Auto-select the first vendor if none is selected
-          if (!selectedVendorId && data.vendors && data.vendors.length > 0) {
-            console.log("[LiveRace] Auto-selecting vendor:", data.vendors[0].id);
+          // Auto-select the first vendor only on initial load, not on refetches
+          if (!hasInitializedSelection.current && data.vendors && data.vendors.length > 0) {
             setSelectedVendorId(data.vendors[0].id);
+            hasInitializedSelection.current = true;
           }
 
           // Stop polling if negotiation is finished
@@ -270,7 +275,7 @@ export function LiveRace() {
           <CommunicationLog 
             messages={
               selectedVendorId 
-                ? allMessages.filter((m: any) => m.vendor_id && String(m.vendor_id) === String(selectedVendorId))
+                ? allMessages.filter((m) => m.vendor_id && String(m.vendor_id) === String(selectedVendorId))
                 : allMessages
             } 
           />
