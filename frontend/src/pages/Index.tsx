@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { NegotiationCard } from "@/components/NegotiationCard";
 import { SpatzIcon } from "@/components/SpatzIcon";
@@ -10,6 +10,18 @@ export function Index() {
   const navigate = useNavigate();
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [inputValue, setInputValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [typingText, setTypingText] = useState("");
+  const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const userName = "Spatz"; // TODO: Replace with actual logged-in user name
+  
+  const examples = [
+    "I want the best deal for a coffee machine for the office...",
+    "We need a banner for going on fairs with our company logo on it...",
+    "We want to find a food delivery service for providing the best food in a hackathon..."
+  ];
 
   useEffect(() => {
     async function fetchNegotiations() {
@@ -28,6 +40,49 @@ export function Index() {
     }
     fetchNegotiations();
   }, []);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [inputValue]);
+
+  // Typing effect
+  useEffect(() => {
+    if (inputValue) return; // Don't show typing effect if user is typing
+    
+    const currentExample = examples[currentExampleIndex];
+    let timeout: NodeJS.Timeout;
+
+    if (!isDeleting) {
+      // Typing
+      if (typingText.length < currentExample.length) {
+        timeout = setTimeout(() => {
+          setTypingText(currentExample.slice(0, typingText.length + 1));
+        }, 50);
+      } else {
+        // Finished typing, wait then start deleting
+        timeout = setTimeout(() => {
+          setIsDeleting(true);
+        }, 2000);
+      }
+    } else {
+      // Deleting
+      if (typingText.length > 0) {
+        timeout = setTimeout(() => {
+          setTypingText(typingText.slice(0, -1));
+        }, 30);
+      } else {
+        // Finished deleting, move to next example
+        setIsDeleting(false);
+        setCurrentExampleIndex((prev) => (prev + 1) % examples.length);
+      }
+    }
+
+    return () => clearTimeout(timeout);
+  }, [typingText, currentExampleIndex, isDeleting, inputValue, examples]);
 
   const activeNegotiations = negotiations.filter(
     (n) => n.status === "IN_PROGRESS" || n.status === "REVIEW_REQUIRED"
@@ -62,14 +117,41 @@ export function Index() {
             </p>
           </div>
 
-          {/* Main content: Large centered Start Negotiation button */}
-          <div className="flex justify-center items-center my-32">
-            <Button 
-              onClick={() => navigate("/new")} 
-              size="lg" 
-              className="text-4xl px-24 py-12 h-auto font-semibold bg-gray-900/80 backdrop-blur-md hover:bg-gray-900/90 text-white border border-gray-700/50 shadow-lg transition-all min-w-[400px]"
+          {/* Main content: Natural language input field */}
+          <div className="flex flex-col items-center my-32 w-full max-w-4xl mx-auto">
+            <label 
+              htmlFor="negotiation-input" 
+              className="text-white text-3xl font-semibold mb-6 text-center w-full"
             >
-              Ready to negotiate?
+              Ready to negotiate, {userName}?
+            </label>
+            <div className="relative w-full">
+              <textarea
+                id="negotiation-input"
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder=""
+                className="w-full min-h-[120px] px-6 py-4 text-white text-lg bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all"
+                style={{ 
+                  fontFamily: 'inherit',
+                  lineHeight: '1.5'
+                }}
+              />
+              {!inputValue && typingText && (
+                <div className="absolute top-4 left-6 text-white/50 text-lg pointer-events-none">
+                  {typingText}
+                  <span className="animate-pulse">|</span>
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={() => navigate("/new")}
+              variant="ghost"
+              size="sm"
+              className="mt-4 text-white/70 hover:text-white text-xs"
+            >
+              Use normal input form
             </Button>
           </div>
 
