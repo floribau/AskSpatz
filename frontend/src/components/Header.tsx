@@ -1,7 +1,5 @@
-import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SpatzIcon } from "./SpatzIcon";
-import { Button } from "./ui/button";
 
 interface HeaderProps {
   onNewNegotiation?: () => void;
@@ -17,11 +15,6 @@ export function Header({ onNewNegotiation }: HeaderProps) {
             ask<span className="text-primary">Spatz</span>
           </span>
         </Link>
-        <Button onClick={onNewNegotiation} className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Start New Negotiation</span>
-          <span className="sm:hidden">New</span>
-        </Button>
       </div>
     </header>
   );

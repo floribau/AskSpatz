@@ -11,9 +11,9 @@ interface NegotiationCardProps {
 
 export function NegotiationCard({ negotiation }: NegotiationCardProps) {
   return (
-    <Link to={`/negotiation/${negotiation.id}`} className="block">
-      <Card className="p-4 md:p-6 hover:shadow-md transition-shadow cursor-pointer">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <Link to={`/negotiation/${negotiation.id}`} className="block h-full">
+      <Card className="h-full p-4 md:p-6 hover:shadow-md transition-shadow cursor-pointer flex flex-col">
+        <div className="flex flex-col flex-1 justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs text-muted-foreground font-mono">
