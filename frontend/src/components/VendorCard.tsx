@@ -17,7 +17,7 @@ export function VendorCard({ vendor, onClick }: VendorCardProps) {
   return (
     <Card 
       onClick={onClick}
-      className="h-full p-6 transition-all duration-300 cursor-pointer flex flex-col bg-gray-800/80 border-gray-700 hover:bg-gray-800/80 hover:border-gray-600 hover:shadow-2xl hover:shadow-gray-900/50 hover:-translate-y-1"
+      className="h-full p-6 transition-all duration-300 cursor-pointer flex flex-col bg-stone-800/80 border-stone-700 hover:bg-stone-800/80 hover:border-stone-600 hover:shadow-2xl hover:shadow-stone-900/50 hover:-translate-y-1"
     >
       <div className="flex flex-col flex-1 justify-between items-center text-center gap-6">
         {/* Title Section - Centered */}
@@ -26,7 +26,7 @@ export function VendorCard({ vendor, onClick }: VendorCardProps) {
             {vendor.name}
           </h3>
           {vendor.behaviour && (
-            <p className="text-sm text-gray-400 break-words line-clamp-2">
+            <p className="text-sm text-stone-400 break-words line-clamp-2">
               {vendor.behaviour}
             </p>
           )}
@@ -36,7 +36,7 @@ export function VendorCard({ vendor, onClick }: VendorCardProps) {
         <div className="flex flex-col items-center gap-4 w-full">
           {/* Vendor Icon */}
           <div className="flex flex-col items-center w-full">
-            <p className="text-xs text-gray-400 mb-1">Vendor</p>
+            <p className="text-xs text-stone-400 mb-1">Vendor</p>
             <div className="flex items-center gap-1.5 text-white">
               <Building2 className="h-4 w-4" />
               <span className="text-lg font-semibold">Active</span>

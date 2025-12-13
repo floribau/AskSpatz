@@ -51,7 +51,7 @@ export function AllNegotiations() {
         <div className="w-full mx-auto max-w-7xl">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
-            <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+            <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-900/50">
               <Link to="/">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
@@ -66,19 +66,19 @@ export function AllNegotiations() {
           </div>
 
           {/* Dark gray tile container for negotiations */}
-          <div className="bg-gray-900 rounded-2xl p-6 md:p-8">
+          <div className="bg-stone-900 rounded-2xl p-6 md:p-8">
             <Tabs defaultValue="active" className="space-y-6">
               <div className="flex justify-start">
-                <TabsList className="bg-gray-800">
+                <TabsList className="bg-stone-800">
                   <TabsTrigger 
                     value="active" 
-                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
+                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-stone-700"
                   >
                     Active ({activeNegotiations.length})
                   </TabsTrigger>
                   <TabsTrigger 
                     value="completed" 
-                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-gray-700"
+                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-stone-700"
                   >
                     Completed ({completedNegotiations.length})
                   </TabsTrigger>

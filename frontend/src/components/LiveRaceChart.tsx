@@ -45,7 +45,7 @@ export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }:
   };
 
   return (
-    <Card className="bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
+    <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           Price Comparison
@@ -64,24 +64,24 @@ export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }:
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={priceHistory}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#57534e" />
               <XAxis
                 dataKey="round"
                 tickFormatter={(value) => `R${value}`}
                 className="text-xs"
-                stroke="#9CA3AF"
+                stroke="#a8a29e"
               />
               <YAxis
                 tickFormatter={formatYAxis}
                 className="text-xs"
                 domain={["auto", "auto"]}
-                stroke="#9CA3AF"
+                stroke="#a8a29e"
               />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-lg">
+                      <div className="bg-stone-800 border border-stone-700 rounded-lg p-3 shadow-lg">
                         <p className="font-semibold mb-2 text-white">Round {label}</p>
                         {payload.map((entry) => (
                           <div
@@ -144,8 +144,8 @@ export function LiveRaceChart({ priceHistory, vendors, finishedVendorIds = [] }:
                   isFinished
                     ? "bg-green-500/20 ring-2 ring-green-400"
                     : isWinner
-                    ? "bg-gray-700/50 ring-2 ring-gray-500 hover:bg-gray-700/70"
-                    : "bg-gray-800/80 hover:bg-gray-800/80"
+                    ? "bg-stone-700/50 ring-2 ring-stone-500 hover:bg-stone-700/70"
+                    : "bg-stone-800/80 hover:bg-stone-800/80"
                 }`}
               >
                 <div

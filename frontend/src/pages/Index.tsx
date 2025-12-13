@@ -232,7 +232,7 @@ export function Index() {
             <div className="flex items-center justify-center gap-3 mb-4">
               <SpatzIcon size={48} />
               <h1 className="text-4xl font-bold text-white">
-                ask<span className="text-gray-900">Spatz</span>
+                ask<span className="text-stone-900">Spatz</span>
               </h1>
             </div>
             <p className="text-white/80">
@@ -258,7 +258,7 @@ export function Index() {
                 onKeyDown={handleKeyDown}
                 placeholder=""
                 disabled={isSubmitting}
-                className="w-full min-h-[120px] px-6 py-4 pr-20 text-white text-lg bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all disabled:opacity-50"
+                className="w-full min-h-[120px] px-6 py-4 pr-20 text-white text-lg bg-stone-900/80 backdrop-blur-md border border-stone-700/50 rounded-2xl shadow-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-stone-600 focus:border-stone-600 transition-all disabled:opacity-50"
                 style={{ 
                   fontFamily: 'inherit',
                   lineHeight: '1.5'
@@ -274,7 +274,7 @@ export function Index() {
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || isSubmitting}
                 size="sm"
-                className="absolute bottom-4 right-4 h-8 px-3 bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute bottom-4 right-4 h-8 px-3 bg-stone-700 hover:bg-stone-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -294,7 +294,7 @@ export function Index() {
           </div>
 
           {/* Dark gray tile container for negotiations and vendors */}
-          <div className="bg-gray-900/80 rounded-t-2xl mt-64 p-6 md:p-8">
+          <div className="bg-stone-900/80 rounded-t-2xl mt-64 p-6 md:p-8">
             <div className="space-y-12">
               {/* Negotiations Section */}
               <div className="space-y-4">
@@ -305,7 +305,7 @@ export function Index() {
                       onClick={() => navigate("/all-negotiations")}
                       variant="outline"
                       size="sm"
-                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-800/50"
                     >
                       Browse All ({negotiations.length})
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -348,7 +348,7 @@ export function Index() {
                       onClick={() => navigate("/all-vendors")}
                       variant="outline"
                       size="sm"
-                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+                      className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-800/50"
                     >
                       Browse All ({vendors.length})
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -386,7 +386,7 @@ export function Index() {
 
       {/* Edit Vendor Behavior Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
+        <DialogContent className="bg-stone-900 border-stone-700 text-white max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-white">
               Edit Behavior: {selectedVendor?.name}
@@ -400,7 +400,7 @@ export function Index() {
               value={editedBehaviour}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditedBehaviour(e.target.value)}
               placeholder="Enter vendor behavior description..."
-              className="min-h-[200px] bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
+              className="min-h-[200px] bg-stone-800 border-stone-700 text-white placeholder:text-stone-500"
             />
           </div>
           <DialogFooter>

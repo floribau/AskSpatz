@@ -154,7 +154,7 @@ export function LiveRace() {
         {/* Top bar with back button and centered logo */}
         <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
           {/* Back button - top left */}
-          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/80">
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-900/80">
             <Link to="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -165,7 +165,7 @@ export function LiveRace() {
           <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
             <SpatzIcon size={36} />
             <span className="text-xl font-semibold text-white">
-              ask<span className="text-gray-900">Spatz</span>
+              ask<span className="text-stone-900">Spatz</span>
             </span>
           </Link>
           
@@ -193,7 +193,7 @@ export function LiveRace() {
         {/* Top bar with back button and centered logo */}
         <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
           {/* Back button - top left */}
-          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/80">
+          <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-900/80">
             <Link to="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -204,7 +204,7 @@ export function LiveRace() {
           <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
             <SpatzIcon size={36} />
             <span className="text-xl font-semibold text-white">
-              ask<span className="text-gray-900">Spatz</span>
+              ask<span className="text-stone-900">Spatz</span>
             </span>
           </Link>
           
@@ -280,7 +280,7 @@ export function LiveRace() {
       {/* Top bar with back button and centered logo */}
       <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
         {/* Back button - top left */}
-        <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/50">
+        <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-900/50">
           <Link to="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -310,7 +310,7 @@ export function LiveRace() {
         </div>
 
         {/* Current Best Price Banner */}
-        <Card className="mb-8 bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
+        <Card className="mb-8 bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
           <CardContent className="py-6">
             <div className="flex flex-col items-center gap-4 text-center">
               <div>
@@ -376,7 +376,7 @@ export function LiveRace() {
           />
 
           {/* Offers Widget */}
-          <Card className="bg-gray-900/80 backdrop-blur-md border-gray-700/50 shadow-lg">
+          <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
                 <DollarSign className="h-5 w-5 text-green-400" />
@@ -393,7 +393,7 @@ export function LiveRace() {
                   {offers.map((offer) => (
                     <div
                       key={offer.id}
-                      className="p-4 border border-gray-700/50 rounded-lg bg-gray-800/80"
+                      className="p-4 border border-stone-700/50 rounded-lg bg-stone-800/80"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
@@ -447,7 +447,7 @@ export function LiveRace() {
 
         {/* Human Intervention Section (for REVIEW_REQUIRED) */}
         {negotiation.status === "REVIEW_REQUIRED" && (
-          <Card className="mt-8 bg-gray-900/80 backdrop-blur-md border-yellow-500/50 shadow-lg">
+          <Card className="mt-8 bg-stone-900/80 backdrop-blur-md border-yellow-500/50 shadow-lg">
             <CardHeader>
               <CardTitle className="text-yellow-400 text-center">
                 Human Intervention Recommended

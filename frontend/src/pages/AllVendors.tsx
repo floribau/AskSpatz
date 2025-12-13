@@ -109,7 +109,7 @@ export function AllVendors() {
         <div className="w-full mx-auto max-w-7xl">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
-            <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-900/80">
+            <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-900/80">
               <Link to="/">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
@@ -121,7 +121,7 @@ export function AllVendors() {
           </div>
 
           {/* Dark gray tile container for vendors */}
-          <div className="bg-gray-900 rounded-2xl p-6 md:p-8">
+          <div className="bg-stone-900 rounded-2xl p-6 md:p-8">
             {isLoading ? (
               <div className="text-center py-12">
                 <p className="text-lg text-muted-foreground">
@@ -151,7 +151,7 @@ export function AllVendors() {
 
       {/* Edit Vendor Behavior Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
+        <DialogContent className="bg-stone-900 border-stone-700 text-white max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-white">
               Edit Behavior: {selectedVendor?.name}
@@ -165,14 +165,14 @@ export function AllVendors() {
               value={editedBehaviour}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditedBehaviour(e.target.value)}
               placeholder="Enter vendor behavior description..."
-              className="min-h-[200px] bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
+              className="min-h-[200px] bg-stone-800 border-stone-700 text-white placeholder:text-stone-500"
             />
           </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsEditModalOpen(false)}
-              className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-gray-800/50"
+              className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-800/50"
             >
               Cancel
             </Button>
