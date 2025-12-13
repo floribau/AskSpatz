@@ -30,7 +30,7 @@ const activeNegotiations = new Map<string, { agent: Agent; status: string }>();
 
 // Start negotiation endpoint
 app.post("/api/negotiations/start", async (req, res) => {
-  const { vendorIds, negotiationName, productName, startingPrice, targetReduction, negotiationGroupId } = req.body;
+  const { vendorIds, negotiationName, productName, startingPrice, targetReduction, quantity } = req.body;
 
   if (!vendorIds || !Array.isArray(vendorIds) || vendorIds.length === 0) {
     return res.status(400).json({ error: "vendorIds array is required" });
@@ -40,6 +40,25 @@ app.post("/api/negotiations/start", async (req, res) => {
   console.log(`[API] Negotiation: ${negotiationName}, Product: ${productName}`);
   console.log(`[API] Starting Price: ${startingPrice}, Target Reduction: ${targetReduction}%`);
 
+  // First, create a negotiation_group for this batch of negotiations
+  const { data: negotiationGroup, error: groupError } = await supabase
+    .from("negotiation_group")
+    .insert({
+      name: negotiationName || "Untitled Negotiation",
+      product: null, // Can be linked to a product ID if needed
+      quantity: quantity || 1,
+      status: "running",
+    })
+    .select()
+    .single();
+
+  if (groupError) {
+    console.error("[API] Failed to create negotiation group:", groupError.message);
+    return res.status(500).json({ error: "Failed to create negotiation group" });
+  }
+
+  console.log(`[API] Created negotiation group: ${negotiationGroup.id}`);
+
   const negotiationPromises = vendorIds.map(async (vendorId: string) => {
     try {
       const localNegotiationId = `${Date.now()}-${vendorId}`;
@@ -47,7 +66,7 @@ app.post("/api/negotiations/start", async (req, res) => {
       
       activeNegotiations.set(localNegotiationId, { agent, status: "initializing" });
       
-      await agent.initialize(vendorId, negotiationGroupId);
+      await agent.initialize(vendorId, negotiationGroup.id);
       activeNegotiations.set(localNegotiationId, { agent, status: "running" });
       
       // Run the agent in the background
@@ -57,6 +76,7 @@ app.post("/api/negotiations/start", async (req, res) => {
         vendorId,
         localNegotiationId,
         negotiationId: agent.negotiation_id, // Database negotiation ID
+        negotiationGroupId: negotiationGroup.id,
         conversationId: agent.conversation_id,
         status: "started",
       };
@@ -71,7 +91,10 @@ app.post("/api/negotiations/start", async (req, res) => {
   });
 
   const results = await Promise.all(negotiationPromises);
-  res.json({ negotiations: results });
+  res.json({ 
+    negotiationGroupId: negotiationGroup.id,
+    negotiations: results 
+  });
 });
 
 // Run agent for a specific vendor
@@ -162,6 +185,46 @@ app.get("/api/vendors", async (req, res) => {
   } catch (err) {
     console.error("[API] Error fetching vendors:", err);
     res.status(500).json({ error: "Failed to fetch vendors" });
+  }
+});
+
+// Get all negotiation groups
+app.get("/api/negotiation-groups", async (req, res) => {
+  try {
+    // Fetch negotiation groups with count of negotiations (vendors)
+    const { data: groups, error } = await supabase
+      .from("negotiation_group")
+      .select(`
+        id,
+        name,
+        product,
+        quantity,
+        status,
+        negotiation (id, vendor_id)
+      `)
+      .order("id", { ascending: false });
+
+    if (error) {
+      console.error("[API] Error fetching negotiation groups:", error.message);
+      return res.status(500).json({ error: "Failed to fetch negotiation groups" });
+    }
+
+    // Map to frontend format
+    const formattedGroups = groups.map((group) => ({
+      id: group.id.toString(),
+      title: group.name,
+      productName: "", // Can be populated from products table if linked
+      best_nap: 0, // Can be calculated from offers
+      savings_percent: 0, // Can be calculated
+      status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
+      vendors_engaged: Array.isArray(group.negotiation) ? group.negotiation.length : 0,
+      created_at: new Date().toISOString(), // Add created_at to table if needed
+    }));
+
+    res.json(formattedGroups);
+  } catch (err) {
+    console.error("[API] Error fetching negotiation groups:", err);
+    res.status(500).json({ error: "Failed to fetch negotiation groups" });
   }
 });
 

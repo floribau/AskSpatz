@@ -1,11 +1,32 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { NegotiationCard } from "@/components/NegotiationCard";
-import { negotiations } from "@/data/negotiations";
+import { Negotiation } from "@/data/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function Index() {
   const navigate = useNavigate();
+  const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchNegotiations() {
+      try {
+        const response = await fetch("http://localhost:3001/api/negotiation-groups");
+        if (!response.ok) {
+          throw new Error("Failed to fetch negotiations");
+        }
+        const data = await response.json();
+        setNegotiations(data);
+      } catch (error) {
+        console.error("Error fetching negotiations:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchNegotiations();
+  }, []);
 
   const activeNegotiations = negotiations.filter(
     (n) => n.status === "IN_PROGRESS" || n.status === "REVIEW_REQUIRED"
@@ -40,7 +61,13 @@ export function Index() {
           </TabsList>
 
           <TabsContent value="active" className="space-y-4">
-            {activeNegotiations.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-lg text-muted-foreground">
+                  Loading negotiations...
+                </p>
+              </div>
+            ) : activeNegotiations.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-lg text-muted-foreground">
                   No active negotiations
@@ -60,7 +87,13 @@ export function Index() {
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
-            {completedNegotiations.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-lg text-muted-foreground">
+                  Loading negotiations...
+                </p>
+              </div>
+            ) : completedNegotiations.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-lg text-muted-foreground">
                   No completed negotiations yet

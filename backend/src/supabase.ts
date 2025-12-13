@@ -25,11 +25,14 @@ export interface Product {
   vendor_ids: number[];
 }
 
+export type NegotiationGroupStatus = "running" | "finished";
+
 export interface NegotiationGroup {
   id: number;
   name: string;
   product: number | null;
   quantity: number;
+  status: NegotiationGroupStatus;
 }
 
 export interface Negotiation {
