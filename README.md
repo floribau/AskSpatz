@@ -1,6 +1,6 @@
 # AskSpatz
 
-AskSpatz revolutionizes procurement by deploying intelligent AI agents that negotiate with multiple vendors simultaneously on your behalf. Watch as autonomous agents compete, learn, and leverage each other's progress to secure the best deals—all while you monitor the action in real-time through a powerful, intuitive dashboard.
+AskSpatz revolutionizes procurement by deploying intelligent AI agents that negotiate with multiple vendors simultaneously on your behalf. Watch as autonomous agents compete, learn, and leverage each other's progress to secure the best deals all while you monitor the action in real time through a powerful, intuitive dashboard.
 
 ## Features
 
