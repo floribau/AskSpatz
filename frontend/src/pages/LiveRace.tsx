@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, DollarSign, Trophy, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, CheckCircle, DollarSign, Trophy, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
