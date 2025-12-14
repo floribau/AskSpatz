@@ -588,7 +588,7 @@ app.get("/api/negotiation-groups/:id", async (req, res) => {
       id: group.id.toString(),
       title: group.name,
       productName: "", // Can be populated from products table
-      status: group.status === "running" ? "IN_PROGRESS" : "COMPLETED",
+      status: group.status === "accepted" ? "ACCEPTED" : group.status === "finished" ? "COMPLETED" : "IN_PROGRESS",
       vendors_engaged: negotiations?.length || 0,
       vendors: formattedVendors,
       negotiations: negotiations || [],

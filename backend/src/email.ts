@@ -1,13 +1,25 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend instance when needed and if API key exists
+let resend: Resend | null = null;
+
+function getResendInstance(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 export async function sendNegotiationCompleteEmail(
   recipientEmail: string,
   negotiationGroupId: number,
   negotiationGroupName: string
 ): Promise<void> {
-  if (!process.env.RESEND_API_KEY) {
+  const resendInstance = getResendInstance();
+  if (!resendInstance) {
     console.warn("[Email] RESEND_API_KEY not set, skipping email send");
     return;
   }
@@ -15,7 +27,7 @@ export async function sendNegotiationCompleteEmail(
   const negotiationUrl = `http://localhost:5173/negotiation/${negotiationGroupId}`;
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resendInstance.emails.send({
       from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
       to: recipientEmail,
       subject: `Negotiation Complete: ${negotiationGroupName}`,
