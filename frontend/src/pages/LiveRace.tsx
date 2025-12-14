@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, MessageCircle, CheckCircle, DollarSign, Trophy, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { SuggestionCard } from "@/components/SuggestionCard";
-import { InterventionModal } from "@/components/InterventionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -29,7 +28,6 @@ interface Offer {
 export function LiveRace() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [showIntervention, setShowIntervention] = useState(false);
   const [showOffersPanel, setShowOffersPanel] = useState(false);
   const hasUserSelectedOffer = useRef(false);
   const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(null);
@@ -261,35 +259,6 @@ export function LiveRace() {
     );
   }
 
-  const handleSendMessage = (message: string) => {
-    const newMessage: Message = {
-      sender: "human",
-      name: "Human Negotiator",
-      content: message,
-      timestamp: new Date().toISOString(),
-    };
-    setNegotiation((prev) =>
-      prev
-        ? {
-            ...prev,
-            messages: [...prev.messages, newMessage],
-          }
-        : null
-    );
-    toast({ title: "Message sent", variant: "success" });
-  };
-
-  const handleApprove = () => {
-    toast({
-      title: "Purchase Order Approved",
-      description: "The PO has been sent to the winning vendor.",
-      variant: "success",
-    });
-  };
-
-  const handleManualIntervention = () => {
-    setShowIntervention(true);
-  };
 
   // Find best price from all price history (real data only)
   let lowestPrice = Infinity;
@@ -658,62 +627,6 @@ export function LiveRace() {
           </Card>
         </div>
 
-        {/* Human Intervention Section (for REVIEW_REQUIRED) */}
-        {negotiation.status === "REVIEW_REQUIRED" && (
-          <Card className="mt-8 bg-stone-900/80 backdrop-blur-md border-amber-300/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-amber-200 text-center">
-                Human Intervention Recommended
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {negotiation.suggestions.map((suggestion, idx) => (
-                  <SuggestionCard key={idx} suggestion={suggestion} />
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-4 justify-center">
-                <Button
-                  onClick={handleApprove}
-                  variant="success"
-                  className="gap-2"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  Approve & Send PO
-                </Button>
-                <Button
-                  onClick={handleManualIntervention}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Hand className="h-4 w-4" />
-                  Manual Intervention
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Always show intervention button for active negotiations */}
-        {negotiation.status === "IN_PROGRESS" && (
-          <div className="mt-8 flex justify-center">
-            <Button
-              onClick={handleManualIntervention}
-              className="gap-2 w-full md:w-auto"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Intervene as Human
-            </Button>
-          </div>
-        )}
-
-        {/* Intervention Modal */}
-        <InterventionModal
-          open={showIntervention}
-          onOpenChange={setShowIntervention}
-          negotiation={negotiation}
-          onSendMessage={handleSendMessage}
-        />
 
         {/* Offers Panel (Slide-out from right) */}
         <Sheet open={showOffersPanel} onOpenChange={setShowOffersPanel}>
