@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, TrendingDown, Trophy, BarChart3, Coins, History, Info } from "lucide-react";
+import { ArrowLeft, TrendingDown, Trophy, Coins, History, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,53 @@ interface BettingOption {
   winProbability: number;
   startingPrice: number;
 }
+
+interface Bet {
+  negotiationGroupId: string;
+  negotiationId: string;
+  vendorId: string;
+  vendorName: string;
+  negotiationTitle: string;
+  betAmount: number;
+  odds: number;
+  potentialReturn: number;
+  status: "pending" | "won" | "lost" | "cashed_out";
+  timestamp: number;
+}
+
+// Session storage helpers for bets (10 minute expiry)
+const BET_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+function getBetKey(negotiationGroupId: string): string {
+  return `bet_${negotiationGroupId}`;
+}
+
+function saveBetToSession(bet: Bet): void {
+  sessionStorage.setItem(getBetKey(bet.negotiationGroupId), JSON.stringify(bet));
+}
+
+function getBetFromSession(negotiationGroupId: string): Bet | null {
+  const betData = sessionStorage.getItem(getBetKey(negotiationGroupId));
+  if (!betData) return null;
+  
+  try {
+    const bet: Bet = JSON.parse(betData);
+    const age = Date.now() - bet.timestamp;
+    
+    // Check if bet is still valid (within 10 minutes)
+    if (age > BET_EXPIRY_MS) {
+      sessionStorage.removeItem(getBetKey(negotiationGroupId));
+      return null;
+    }
+    
+    return bet;
+  } catch (error) {
+    console.error("Error parsing bet from session:", error);
+    sessionStorage.removeItem(getBetKey(negotiationGroupId));
+    return null;
+  }
+}
+
 
 interface VendorHistory {
   vendorId: string;
@@ -97,6 +144,8 @@ export function Betting() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("betting");
   const [isCompleted, setIsCompleted] = useState(false);
+  const [currentBet, setCurrentBet] = useState<Bet | null>(null);
+  const [flyingCoins, setFlyingCoins] = useState<Array<{ id: number; x: number; y: number; targetX?: number; targetY?: number }>>([]);
 
   // Fetch negotiation data - if id is provided, only fetch that negotiation
   useEffect(() => {
@@ -189,10 +238,81 @@ export function Betting() {
     }
 
     fetchNegotiations();
-    const interval = setInterval(fetchNegotiations, 5000); // Update every 5 seconds
+    const interval = setInterval(fetchNegotiations, 5000); // Update every 5 seconds to pull latest changes
 
     return () => clearInterval(interval);
   }, [id]);
+
+  // Load bet from session storage when negotiation ID changes
+  useEffect(() => {
+    if (id) {
+      const bet = getBetFromSession(id);
+      setCurrentBet(bet);
+    } else {
+      setCurrentBet(null);
+    }
+  }, [id]);
+
+  // Clean up expired bets periodically
+  useEffect(() => {
+    const checkExpiredBets = () => {
+      if (id && currentBet) {
+        const bet = getBetFromSession(id);
+        if (!bet) {
+          // Bet expired
+          setCurrentBet(null);
+        }
+      }
+    };
+
+    const interval = setInterval(checkExpiredBets, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [id, currentBet]);
+
+  // Check if bet won when negotiation completes
+  useEffect(() => {
+    if (!currentBet || !id || currentBet.status !== "pending") return;
+    if (!isCompleted || negotiations.length === 0) return;
+
+    const negotiation = negotiations.find(n => n.id === id);
+    if (!negotiation || !negotiation.priceHistory || negotiation.priceHistory.length === 0) return;
+
+    // Get latest prices for all vendors
+    const latestRound = negotiation.priceHistory[negotiation.priceHistory.length - 1];
+    const prices: { vendorId: string; price: number }[] = [];
+
+    negotiation.vendors.forEach(vendor => {
+      const price = latestRound[vendor.id] as number | undefined;
+      if (price && price > 0) {
+        prices.push({ vendorId: vendor.id, price });
+      }
+    });
+
+    if (prices.length === 0) return;
+
+    // Find winning vendor (lowest price)
+    const winningVendor = prices.reduce((min, v) => v.price < min.price ? v : min);
+    
+    // Update bet status
+    const newStatus: "won" | "lost" = currentBet.vendorId === winningVendor.vendorId ? "won" : "lost";
+    const updatedBet = { ...currentBet, status: newStatus };
+    saveBetToSession(updatedBet);
+    setCurrentBet(updatedBet);
+
+    if (newStatus === "won") {
+      toast({
+        title: "You Won! 🎉",
+        description: `Your vendor won the negotiation! You can cash out ${currentBet.potentialReturn.toFixed(0)} Spatzencoins.`,
+      });
+    } else {
+      toast({
+        title: "Bet Lost",
+        description: "Your vendor didn't win this negotiation.",
+        variant: "destructive",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCompleted, negotiations, currentBet, id]);
 
   // Calculate betting options based on most recent prices
   useEffect(() => {
@@ -271,7 +391,7 @@ export function Betting() {
           const maxPrice = Math.max(...prices);
           const range = maxPrice - minPrice || 1;
 
-          withPrices.forEach((opt, index) => {
+          withPrices.forEach((opt) => {
             // Inverse probability: lower price = higher probability
             const priceScore = 1 - ((opt.currentPrice! - minPrice) / range) * 0.7;
             opt.winProbability = (priceScore / withPrices.reduce((sum, o) => {
@@ -320,7 +440,7 @@ export function Betting() {
   }, [betAmount, selectedOption?.odds]);
 
   const handlePlaceBet = () => {
-    if (!selectedOption || !betAmount) {
+    if (!selectedOption || !betAmount || !id) {
       toast({
         title: "Please select an option and enter bet amount",
         variant: "destructive",
@@ -346,6 +466,34 @@ export function Betting() {
       return;
     }
 
+    // Check if user already has a bet
+    if (currentBet) {
+      toast({
+        title: "You already have a bet",
+        description: "You can only place one bet per negotiation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create bet object
+    const bet: Bet = {
+      negotiationGroupId: id,
+      negotiationId: selectedOption.negotiationId,
+      vendorId: selectedOption.vendor.id,
+      vendorName: selectedOption.vendor.company,
+      negotiationTitle: selectedOption.negotiationTitle,
+      betAmount: amount,
+      odds: selectedOption.odds,
+      potentialReturn: amount * selectedOption.odds,
+      status: "pending",
+      timestamp: Date.now()
+    };
+
+    // Save to session storage
+    saveBetToSession(bet);
+    setCurrentBet(bet);
+
     // Deduct coins
     setSpatzencoins(prev => prev - amount);
 
@@ -357,6 +505,46 @@ export function Betting() {
     // Reset
     setSelectedOption(null);
     setBetAmount("");
+  };
+
+  const handleCashOut = () => {
+    if (!currentBet || currentBet.status !== "won") {
+      return;
+    }
+
+    // Create flying coins animation - coins fly from button position to top right (coin counter)
+    const coinCount = Math.min(30, Math.max(10, Math.floor(currentBet.potentialReturn / 50)));
+    const buttonX = window.innerWidth / 2; // Approximate button position
+    const buttonY = window.innerHeight - 200; // Approximate button position
+    const targetX = window.innerWidth - 150; // Coin counter position
+    const targetY = 80; // Coin counter position
+    
+    const newFlyingCoins = Array.from({ length: coinCount }, (_, i) => ({
+      id: Date.now() + i,
+      x: buttonX + (Math.random() - 0.5) * 100,
+      y: buttonY + (Math.random() - 0.5) * 50,
+      targetX: targetX + (Math.random() - 0.5) * 50,
+      targetY: targetY + (Math.random() - 0.5) * 30,
+    }));
+    setFlyingCoins(newFlyingCoins);
+
+    // Remove coins after animation
+    setTimeout(() => {
+      setFlyingCoins([]);
+    }, 2500);
+
+    // Add coins
+    setSpatzencoins(prev => prev + currentBet.potentialReturn);
+
+    // Update bet status
+    const updatedBet = { ...currentBet, status: "cashed_out" as const };
+    saveBetToSession(updatedBet);
+    setCurrentBet(updatedBet);
+
+    toast({
+      title: "Cashed Out! 💰",
+      description: `You received ${currentBet.potentialReturn.toFixed(0)} Spatzencoins`,
+    });
   };
 
   if (isLoading) {
@@ -437,9 +625,69 @@ export function Betting() {
         </div>
       </div>
 
-      <main className={`w-full px-4 md:px-6 py-8 relative z-10 max-w-7xl mx-auto ${isCompleted ? 'pointer-events-none' : ''}`}>
+      {/* Top notification banner for bet status */}
+      {currentBet && (currentBet.status === "won" || currentBet.status === "lost") && (
+        <div className={`fixed top-0 left-0 right-0 z-50 ${
+          currentBet.status === "won" 
+            ? "bg-emerald-500/90 backdrop-blur-md border-b border-emerald-400" 
+            : "bg-rose-500/90 backdrop-blur-md border-b border-rose-400"
+        }`}>
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{currentBet.status === "won" ? "🎉" : "😞"}</span>
+                <div>
+                  <p className="text-white font-semibold text-lg">
+                    {currentBet.status === "won" 
+                      ? `You Won! ${currentBet.potentialReturn.toFixed(0)} Spatzencoins` 
+                      : `You Lost ${currentBet.betAmount.toLocaleString()} Spatzencoins`}
+                  </p>
+                  <p className="text-white/90 text-sm">
+                    {currentBet.status === "won" 
+                      ? "Your vendor won the negotiation!" 
+                      : "Your vendor didn't win this negotiation."}
+                  </p>
+                </div>
+              </div>
+              {currentBet.status === "won" && (
+                <Button
+                  onClick={handleCashOut}
+                  className="bg-white text-emerald-600 hover:bg-emerald-50 font-semibold"
+                  size="lg"
+                >
+                  Cash Out 💰
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flying coins animation */}
+      {flyingCoins.map((coin, index) => {
+        const deltaX = coin.targetX ? coin.targetX - coin.x : (Math.random() - 0.5) * 300;
+        const deltaY = coin.targetY ? coin.targetY - coin.y : -400;
+        return (
+          <div
+            key={coin.id}
+            className="fixed pointer-events-none z-[100]"
+            style={{
+              left: `${coin.x}px`,
+              top: `${coin.y}px`,
+              animation: `flyUp 2.5s ease-out forwards`,
+              animationDelay: `${index * 0.03}s`,
+              '--target-x': `${deltaX}px`,
+              '--target-y': `${deltaY}px`,
+            } as React.CSSProperties}
+          >
+            <span className="text-3xl">💰</span>
+          </div>
+        );
+      })}
+
+      <main className={`w-full px-4 md:px-6 py-8 relative z-10 max-w-7xl mx-auto ${isCompleted && !currentBet ? 'pointer-events-none' : ''} ${currentBet && (currentBet.status === "won" || currentBet.status === "lost") ? 'pt-24' : ''}`}>
         {/* Disclaimer for completed negotiations */}
-        {isCompleted && (
+        {isCompleted && !currentBet && (
           <Card className="bg-rose-500/20 backdrop-blur-md border-rose-500/50 shadow-lg mb-6">
             <CardContent className="py-4 px-6">
               <div className="flex items-start gap-3">
@@ -463,7 +711,7 @@ export function Betting() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-stone-800 mb-6 w-full justify-start">
             <TabsTrigger value="betting" className="text-white/70 data-[state=active]:bg-stone-700 data-[state=active]:text-white">
-              Place Bets
+              {currentBet ? "Your Bet" : "Place Bets"}
             </TabsTrigger>
             <TabsTrigger value="history" className="text-white/70 data-[state=active]:bg-stone-700 data-[state=active]:text-white">
               Vendor History
@@ -471,7 +719,105 @@ export function Betting() {
           </TabsList>
 
           <TabsContent value="betting" className="mt-0">
-            {bettingOptions.length === 0 ? (
+            {currentBet ? (
+              <>
+                {/* Your Bet View */}
+                <Card className="bg-stone-900/80 backdrop-blur-md border-amber-300/50 shadow-lg mb-6">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-amber-300" />
+                      Your Bet
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-stone-800/50 rounded-lg">
+                        <p className="text-sm text-white/70 mb-1">Negotiation</p>
+                        <p className="text-lg font-semibold text-white">
+                          {currentBet.negotiationTitle}
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 bg-stone-800/50 rounded-lg">
+                        <p className="text-sm text-white/70 mb-1">Vendor</p>
+                        <p className="text-lg font-semibold text-white">
+                          {currentBet.vendorName}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-stone-800/50 rounded-lg">
+                          <p className="text-sm text-white/70 mb-1">Bet Amount</p>
+                          <p className="text-xl font-bold text-white">{currentBet.betAmount.toLocaleString()} Spatzencoins</p>
+                        </div>
+                        <div className="p-4 bg-stone-800/50 rounded-lg">
+                          <p className="text-sm text-white/70 mb-1">Odds</p>
+                          <p className="text-xl font-bold text-white">{currentBet.odds.toFixed(2)}x</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-stone-800/50 rounded-lg">
+                        <p className="text-sm text-white/70 mb-1">Potential Return</p>
+                        <p className="text-2xl font-bold text-emerald-300">{currentBet.potentialReturn.toFixed(0)} Spatzencoins</p>
+                      </div>
+
+                      <div className="p-4 bg-stone-800/50 rounded-lg">
+                        <p className="text-sm text-white/70 mb-1">Status</p>
+                        <div className="flex items-center gap-2">
+                          {currentBet.status === "pending" && (
+                            <>
+                              <span className="text-lg font-semibold text-amber-300">Pending</span>
+                              <p className="text-sm text-white/60">Waiting for negotiation to complete...</p>
+                            </>
+                          )}
+                          {currentBet.status === "won" && (
+                            <>
+                              <span className="text-lg font-semibold text-emerald-300">Won! 🎉</span>
+                              <p className="text-sm text-white/60">Your vendor won! You can cash out now.</p>
+                            </>
+                          )}
+                          {currentBet.status === "lost" && (
+                            <>
+                              <span className="text-lg font-semibold text-rose-300">Lost</span>
+                              <p className="text-sm text-white/60">Your vendor didn't win this negotiation.</p>
+                              <div className="mt-2 p-3 bg-rose-500/20 border border-rose-500/50 rounded-lg">
+                                <p className="text-sm text-white/70">Amount Lost:</p>
+                                <p className="text-xl font-bold text-rose-300">-{currentBet.betAmount.toLocaleString()} Spatzencoins</p>
+                              </div>
+                            </>
+                          )}
+                          {currentBet.status === "cashed_out" && (
+                            <>
+                              <span className="text-lg font-semibold text-emerald-300">Cashed Out ✓</span>
+                              <p className="text-sm text-white/60">You've already cashed out this bet.</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {currentBet.status === "won" && (
+                        <Button
+                          onClick={handleCashOut}
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                          size="lg"
+                        >
+                          Cash Out {currentBet.potentialReturn.toFixed(0)} Spatzencoins 💰
+                        </Button>
+                      )}
+
+                      {/* Show time remaining */}
+                      {currentBet.status === "pending" && (
+                        <div className="p-3 bg-stone-800/30 rounded-lg border border-stone-700/50">
+                          <p className="text-xs text-white/60">
+                            Bet expires in {Math.max(0, Math.floor((BET_EXPIRY_MS - (Date.now() - currentBet.timestamp)) / 1000 / 60))} minutes
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : bettingOptions.length === 0 ? (
               <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
                 <CardContent className="py-12 text-center">
                   <p className="text-white/70 text-lg">No active negotiations to bet on</p>
