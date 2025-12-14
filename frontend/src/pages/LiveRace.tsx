@@ -840,6 +840,33 @@ export function LiveRace() {
                     setShowAcceptConfirm(false);
                     setShowOffersPanel(false);
                     
+                    // Refetch negotiation group to update status badge
+                    try {
+                      const statusResponse = await fetch(`http://localhost:3001/api/negotiation-groups/${id}`);
+                      if (statusResponse.ok) {
+                        const statusData = await statusResponse.json();
+                        // Backend sends: "ACCEPTED", "COMPLETED", or "IN_PROGRESS"
+                        // Map status same way as in fetchNegotiationGroup
+                        const mappedStatus = statusData.status === "running" 
+                          ? "IN_PROGRESS" 
+                          : statusData.status === "accepted" || statusData.status === "ACCEPTED"
+                          ? "ACCEPTED"
+                          : statusData.status === "COMPLETED" || statusData.status === "finished"
+                          ? "COMPLETED"
+                          : statusData.status || "IN_PROGRESS";
+                        
+                        setNegotiation((prev) => {
+                          if (!prev) return prev;
+                          return {
+                            ...prev,
+                            status: mappedStatus,
+                          };
+                        });
+                      }
+                    } catch (refetchError) {
+                      console.error("Error refetching negotiation status:", refetchError);
+                    }
+                    
                     toast({
                       title: "Offer Accepted",
                       description: `Successfully accepted offer from ${data.vendor_name}`,
