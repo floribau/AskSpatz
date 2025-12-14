@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { SpatzIcon } from "./SpatzIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -217,35 +218,60 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
                     .map((message, index) => {
                       const isFirstMessage = index === 0;
                       const tldr = generateTLDR(message.content, isFirstMessage);
+                      const isAgent = message.sender === "agent";
                       return (
                         <div
                           key={index}
                           className={cn(
-                            "p-3 rounded-lg cursor-pointer transition-all hover:shadow-lg",
-                            message.sender === "agent" &&
-                              "bg-sky-300/20 border border-sky-300/30 hover:bg-sky-300/30",
-                            message.sender === "vendor" &&
-                              "bg-stone-800/80 border border-stone-700/50 hover:bg-stone-800/90",
-                            message.sender === "human" &&
-                              "bg-violet-300/20 border border-violet-300/30 ml-8 hover:bg-violet-300/30"
+                            "flex",
+                            isAgent ? "justify-start pr-2" : "justify-end pl-2"
                           )}
-                          onClick={() => setExpandedMessage(message)}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {message.sender === "agent" && <SpatzIcon size={20} />}
-                              <span className="font-semibold text-sm text-white">{message.name}</span>
+                          <div
+                            className={cn(
+                              "p-4 rounded-lg cursor-pointer transition-all max-w-[100%]",
+                              message.sender === "agent" &&
+                                "bg-stone-700/50 hover:bg-stone-700/70",
+                              message.sender === "vendor" &&
+                                "bg-stone-900/50 hover:bg-stone-900/70",
+                              message.sender === "human" &&
+                                "bg-stone-900/50 hover:bg-stone-900/70"
+                            )}
+                            onClick={() => setExpandedMessage(message)}
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                {message.sender === "agent" && <SpatzIcon size={32} />}
+                                <div>
+                                  <span className="font-medium text-sm text-white block">{message.name}</span>
+                                  <span className="text-xs text-white/50 mt-0.5">
+                                    {new Date(message.timestamp).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                              </div>
+                              <Maximize2 className="h-4 w-4 text-white/40 hover:text-white/60 transition-colors flex-shrink-0 mt-0.5" />
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-white/60">
-                                {new Date(message.timestamp).toLocaleTimeString()}
-                              </span>
-                              <Maximize2 className="h-3 w-3 text-white/50" />
+                            <div className="text-sm text-white/80 break-words line-clamp-5 leading-relaxed prose prose-invert prose-sm max-w-none">
+                              <ReactMarkdown
+                                components={{
+                                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                  h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                                  h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                                  h3: ({ children }) => <h3 className="text-sm font-bold mb-2">{children}</h3>,
+                                  ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                                  ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                                  li: ({ children }) => <li className="ml-2">{children}</li>,
+                                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                                  em: ({ children }) => <em className="italic">{children}</em>,
+                                  code: ({ children }) => <code className="bg-stone-800/50 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                                  pre: ({ children }) => <pre className="bg-stone-800/50 p-2 rounded overflow-x-auto mb-2">{children}</pre>,
+                                  a: ({ children, href }) => <a href={href} className="text-sky-400 hover:text-sky-300 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                                }}
+                              >
+                                {message.content}
+                              </ReactMarkdown>
                             </div>
                           </div>
-                          <p className="text-sm text-white/90 whitespace-pre-wrap break-words line-clamp-3">
-                            {message.content}
-                          </p>
                         </div>
                       );
                     })
@@ -264,7 +290,7 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
               <DialogHeader className="border-b border-stone-700 pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {expandedMessage.sender === "agent" && <SpatzIcon size={24} />}
+                    {expandedMessage.sender === "agent" && <SpatzIcon size={32} />}
                     <div>
                       <DialogTitle className="text-white text-xl">
                         {expandedMessage.name}
@@ -287,9 +313,26 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
                   expandedMessage.sender === "human" &&
                     "bg-violet-300/10 border border-violet-300/20"
                 )}>
-                  <p className="text-base text-white/95 whitespace-pre-wrap break-words leading-relaxed">
-                    {expandedMessage.content}
-                  </p>
+                  <div className="text-base text-white/95 break-words leading-relaxed prose prose-invert prose-base max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                        h1: ({ children }) => <h1 className="text-2xl font-bold mb-3">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-xl font-bold mb-3">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-lg font-bold mb-2">{children}</h3>,
+                        ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
+                        li: ({ children }) => <li className="ml-2">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        code: ({ children }) => <code className="bg-stone-800/50 px-1.5 py-1 rounded text-sm font-mono">{children}</code>,
+                        pre: ({ children }) => <pre className="bg-stone-800/50 p-3 rounded overflow-x-auto mb-3">{children}</pre>,
+                        a: ({ children, href }) => <a href={href} className="text-sky-400 hover:text-sky-300 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                      }}
+                    >
+                      {expandedMessage.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </div>
             </>
