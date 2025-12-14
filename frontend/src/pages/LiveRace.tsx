@@ -422,20 +422,59 @@ export function LiveRace() {
 
             {/* View All Offers button - In same row */}
             {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
-              <Card 
-                onClick={() => setShowOffersPanel(true)}
-                className="bg-stone-900/80 backdrop-blur-md border-2 border-amber-300/80 shadow-lg px-3 py-2 cursor-pointer hover:bg-stone-900/90 hover:border-amber-300 transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-amber-400" />
-                  <div>
-                    <p className="text-[10px] text-white/70 leading-tight">View</p>
-                    <p className="text-sm font-semibold text-amber-300 leading-tight">
-                      Offers
-                    </p>
+              <div className="relative">
+                <Card 
+                  onClick={() => setShowOffersPanel(true)}
+                  className="bg-stone-900/80 backdrop-blur-md border-2 border-amber-300/80 shadow-lg px-3 py-2 cursor-pointer hover:bg-stone-900/90 hover:border-amber-300 transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-400" />
+                    <div>
+                      <p className="text-[10px] text-white/70 leading-tight">View</p>
+                      <p className="text-sm font-semibold text-amber-300 leading-tight">
+                        Offers
+                      </p>
+                    </div>
                   </div>
+                </Card>
+                {/* Handwritten arrow with "click here ;)" */}
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 text-white pointer-events-none flex flex-col items-center">
+                  <svg 
+                    width="50" 
+                    height="30" 
+                    viewBox="0 0 50 30" 
+                    className="transform rotate-180"
+                    style={{ filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' }}
+                  >
+                    <path 
+                      d="M 5 15 Q 15 10, 25 15 T 45 15" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      fill="none" 
+                      strokeLinecap="round"
+                      style={{ strokeDasharray: '2,2' }}
+                    />
+                    <path 
+                      d="M 40 10 L 45 15 L 40 20" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      fill="none" 
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <p 
+                    className="text-[9px] text-white font-handwriting whitespace-nowrap mt-1"
+                    style={{ 
+                      fontFamily: 'cursive',
+                      transform: 'rotate(-2deg)',
+                      textShadow: '0 0 2px rgba(255, 255, 255, 0.5)'
+                    }}
+                  >
+                    click here ;)
+                  </p>
                 </div>
-              </Card>
+              </div>
             )}
           </div>
 
