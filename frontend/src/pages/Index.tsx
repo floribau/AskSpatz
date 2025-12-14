@@ -283,14 +283,6 @@ export function Index() {
                 )}
               </Button>
             </div>
-            <Button
-              onClick={() => navigate("/new")}
-              variant="ghost"
-              size="sm"
-              className="mt-4 text-white/70 hover:text-white text-xs"
-            >
-              Use normal input form
-            </Button>
           </div>
 
           {/* Dark gray tile container for negotiations and vendors */}
