@@ -22,7 +22,7 @@ const statusConfig: Record<
   COMPLETED: {
     label: "Completed",
     className:
-      "border-emerald-300 bg-emerald-300/30 text-emerald-200",
+      "border-amber-300 bg-amber-300/30 text-amber-200",
   },
   PENDING: {
     label: "Pending",

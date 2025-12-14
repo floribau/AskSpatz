@@ -42,7 +42,7 @@ export function NegotiationCard({ negotiation }: NegotiationCardProps) {
                 isRunning 
                   ? "text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,0.8)]" 
                   : isCompleted 
-                  ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]"
+                  ? "text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"
                   : isAccepted
                   ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]"
                   : "text-white"
