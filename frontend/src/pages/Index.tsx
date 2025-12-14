@@ -163,9 +163,15 @@ export function Index() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      handleSubmit();
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        // Shift+Enter = new line (allow default behavior)
+        return;
+      } else {
+        // Enter = submit
+        e.preventDefault();
+        handleSubmit();
+      }
     }
   };
 
