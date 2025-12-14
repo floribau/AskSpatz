@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { initChatModel, HumanMessage, SystemMessage } from "langchain";
 import systemPrompt from "./prompt.js";
 import { supabase } from "./supabase.js";
+import { sendNegotiationCompleteEmail } from "./email.js";
 import { langfuseHandler } from "./langfuse.js";
 
 dotenv.config();
@@ -171,6 +172,13 @@ class Agent {
                 
                 // Only update group status if ALL negotiations have offers
                 if (negotiationsWithOffers.size >= negotiations.length) {
+                  // Get negotiation group details before updating
+                  const { data: groupData, error: groupFetchError } = await supabase
+                    .from("negotiation_group")
+                    .select("id, name")
+                    .eq("id", this.negotiation_group_id)
+                    .single();
+
                   const { error: groupError } = await supabase
                     .from("negotiation_group")
                     .update({ status: "finished" })
@@ -180,6 +188,21 @@ class Agent {
                     console.error("[finishNegotiation] Failed to update group status:", groupError.message);
                   } else {
                     console.log(`[finishNegotiation] All negotiations complete! Updated negotiation group ${this.negotiation_group_id} status to 'finished'`);
+                    
+                    // Send email notification
+                    if (groupData) {
+                      const recipientEmail = "fiebiglennart@gmail.com";
+                      try {
+                        await sendNegotiationCompleteEmail(
+                          recipientEmail,
+                          groupData.id,
+                          groupData.name || "Untitled Negotiation"
+                        );
+                      } catch (emailError) {
+                        console.error("[finishNegotiation] Failed to send email notification:", emailError);
+                        // Don't fail the negotiation if email fails
+                      }
+                    }
                   }
                 } else {
                   console.log(`[finishNegotiation] Waiting for other negotiations to complete (${negotiationsWithOffers.size}/${negotiations.length})`);

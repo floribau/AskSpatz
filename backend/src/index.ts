@@ -5,6 +5,7 @@ import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
 import setupVendors from "./setupVendors.js";
 import { initChatModel, HumanMessage, SystemMessage } from "langchain";
+import { sendNegotiationCompleteEmail } from "./email.js";
  
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -699,6 +700,51 @@ app.post("/api/negotiation-groups/:id/accept-offer", async (req, res) => {
   } catch (err) {
     console.error("[API] Error accepting offer:", err);
     res.status(500).json({ error: "Failed to accept offer" });
+  }
+});
+
+// Test email endpoint
+app.post("/api/negotiation-groups/:id/test-email", async (req, res) => {
+  const groupId = req.params.id;
+
+  try {
+    console.log(`[API] Test email requested for negotiation group ID: ${groupId}`);
+
+    // Fetch negotiation group details - use same pattern as GET endpoint
+    const { data: group, error: groupError } = await supabase
+      .from("negotiation_group")
+      .select("id, name")
+      .eq("id", groupId)
+      .single();
+
+    if (groupError || !group) {
+      console.log(`[API] Negotiation group ${groupId} not found:`, groupError?.message);
+      return res.status(404).json({ 
+        error: "Negotiation group not found",
+        details: groupError?.message || "Group not found in database"
+      });
+    }
+
+    // Always send to fiebiglennart@gmail.com
+    const recipientEmail = "fiebiglennart@gmail.com";
+
+    // Send test email
+    await sendNegotiationCompleteEmail(
+      recipientEmail,
+      group.id,
+      group.name || "Untitled Negotiation"
+    );
+
+    res.json({ 
+      success: true, 
+      message: `Test email sent successfully to ${recipientEmail}` 
+    });
+  } catch (error) {
+    console.error("[API] Error sending test email:", error);
+    res.status(500).json({ 
+      error: "Failed to send test email",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });
 
