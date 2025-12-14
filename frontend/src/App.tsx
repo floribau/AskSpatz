@@ -21,6 +21,7 @@ function App() {
           <Route path="/all-vendors" element={<AllVendors />} />
           <Route path="/negotiation/:id" element={<LiveRace />} />
           <Route path="/negotiation/:id/betting" element={<Betting />} />
+          <Route path="/betting" element={<Betting />} />
           <Route path="/new" element={<NewNegotiation />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

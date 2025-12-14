@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { NegotiationCard } from "@/components/NegotiationCard";
 import { VendorCard } from "@/components/VendorCard";
 import { SpatzIcon } from "@/components/SpatzIcon";

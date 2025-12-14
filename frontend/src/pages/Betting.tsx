@@ -1,280 +1,328 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, TrendingDown, Trophy, BarChart3, DollarSign } from "lucide-react";
-import { Header } from "@/components/Header";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
+import { ArrowLeft, TrendingDown, Trophy, BarChart3, Coins, History, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, cn } from "@/lib/utils";
-import { NegotiationDetail, Vendor } from "@/data/types";
 import { useToast } from "@/hooks/use-toast";
+import { SpatzIcon } from "@/components/SpatzIcon";
 
-interface Offer {
-  id: number;
-  negotiation_id: number;
-  vendor_id: number;
-  vendor_name: string;
-  description: string;
-  price: number;
+interface NegotiationGroup {
+  id: string;
+  title: string;
+  productName: string;
+  status: string;
+  vendors: Vendor[];
+  priceHistory: any[];
+  startingPrice: number;
+  negotiations?: Array<{ id: number; vendor_id: number }>; // Mapping of negotiation_id to vendor_id
 }
 
-interface Negotiation {
-  id: number;
-  vendor_id: number;
-  conversation_id: number;
+interface Vendor {
+  id: string;
+  name: string;
+  company: string;
+  color: string;
 }
 
 interface BettingOption {
+  negotiationId: string;
+  negotiationTitle: string;
+  agentId: string; // Agent ID (negotiation_id for this vendor)
   vendor: Vendor;
-  negotiationId: number;
-  agentId: string; // Unique identifier for the agent (negotiation_id)
-  currentPrice: number | null; // Best offer price, or null if no offers yet
-  reduction: number; // Actual price reduction percentage
-  odds: number; // Decimal odds (e.g., 2.5 means bet $1 to win $2.50)
+  currentPrice: number | null;
+  reduction: number;
+  odds: number;
   potentialReturn: number;
   winProbability: number;
-  performance: {
-    attempts: number;
-    messageCount: number;
-    status: "Strong" | "Moderate" | "Struggling" | "No Offers";
-    bestOffer: number | null;
-  };
+  startingPrice: number;
 }
 
+interface VendorHistory {
+  vendorId: string;
+  company: string;
+  totalNegotiations: number;
+  averageReduction: number;
+  winRate: number;
+  characteristics: string[];
+  knownFor: string;
+}
+
+// Vendor characteristics data
+const vendorCharacteristics: Record<string, VendorHistory> = {
+  "56": {
+    vendorId: "56",
+    company: "Vendor A",
+    totalNegotiations: 12,
+    averageReduction: 18.5,
+    winRate: 65,
+    characteristics: ["Tough negotiator", "Slow to respond", "Quality focused"],
+    knownFor: "Known for being tough in negotiations but offering high quality products"
+  },
+  "57": {
+    vendorId: "57",
+    company: "Vendor B",
+    totalNegotiations: 8,
+    averageReduction: 22.3,
+    winRate: 75,
+    characteristics: ["Fast responder", "Price competitive", "Flexible"],
+    knownFor: "Quick to respond and competitive on pricing"
+  },
+  "58": {
+    vendorId: "58",
+    company: "Vendor C",
+    totalNegotiations: 15,
+    averageReduction: 15.2,
+    winRate: 55,
+    characteristics: ["Stable prices", "Reliable", "Less flexible"],
+    knownFor: "Stable pricing with less flexibility but very reliable"
+  }
+};
+
 export function Betting() {
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const queryId = searchParams.get("id");
+  const id = routeId || queryId; // Use route param first, then query param
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [negotiation, setNegotiation] = useState<NegotiationDetail | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [spatzencoins, setSpatzencoins] = useState<number>(1000); // Starting coins
+  const [negotiations, setNegotiations] = useState<NegotiationGroup[]>([]);
   const [bettingOptions, setBettingOptions] = useState<BettingOption[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<BettingOption | null>(null);
   const [betAmount, setBetAmount] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("betting");
+  const [isCompleted, setIsCompleted] = useState(false);
 
+  // Fetch negotiation data - if id is provided, only fetch that negotiation
   useEffect(() => {
-    if (!id) return;
-
-    let intervalId: NodeJS.Timeout | null = null;
-    let isMounted = true;
-
-    async function fetchNegotiationGroup() {
+    async function fetchNegotiations() {
       try {
-        const response = await fetch(`http://localhost:3001/api/negotiation-groups/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch negotiation group");
+        if (id) {
+          // Fetch only the specific negotiation
+          const response = await fetch(`http://localhost:3001/api/negotiation-groups/${id}`);
+          if (!response.ok) {
+            throw new Error("Failed to fetch negotiation");
+          }
+          const detail = await response.json();
+          
+          // Check status - backend returns "IN_PROGRESS" or "COMPLETED"
+          const status = detail.status;
+          const isCompletedStatus = status === "COMPLETED" || 
+                                    status === "completed" || 
+                                    status === "accepted" ||
+                                    (status && status !== "IN_PROGRESS" && status !== "running" && status !== "REVIEW_REQUIRED" && status !== "PENDING");
+          
+          console.log("[Betting] Negotiation detail:", { id: detail.id, status: detail.status, isCompleted: isCompletedStatus });
+          setIsCompleted(isCompletedStatus);
+          
+          setNegotiations([{
+            id: detail.id || id,
+            title: detail.title || detail.name || "Negotiation",
+            productName: detail.productName || "",
+            status: status,
+            vendors: detail.vendors || [],
+            priceHistory: detail.priceHistory || [],
+            startingPrice: detail.startingPrice || 25000,
+            negotiations: detail.negotiations || []
+          }]);
+        } else {
+          // No id - fetch all active negotiations
+          const response = await fetch("http://localhost:3001/api/negotiation-groups");
+          if (!response.ok) {
+            throw new Error("Failed to fetch negotiations");
+          }
+          const groups = await response.json();
+          
+          // Filter for active negotiations
+          const activeGroups = groups.filter((ng: any) => 
+            ng.status === "IN_PROGRESS" || ng.status === "running" || ng.status === "IN_PROGRESS"
+          );
+          
+          // Fetch detailed data for each negotiation to get price history
+          const detailedNegotiations = await Promise.all(
+            activeGroups.map(async (group: any) => {
+              try {
+                const detailResponse = await fetch(`http://localhost:3001/api/negotiation-groups/${group.id}`);
+                if (detailResponse.ok) {
+                  const detail = await detailResponse.json();
+                  const status = detail.status || group.status;
+                  const isCompletedStatus = status === "COMPLETED" || status === "completed" || 
+                                            (status !== "IN_PROGRESS" && status !== "running" && status !== "REVIEW_REQUIRED");
+                  
+                  const negotiationData = {
+                    id: group.id,
+                    title: group.title || group.name || "Negotiation",
+                    productName: group.productName || "",
+                    status: status,
+                    vendors: detail.vendors || [],
+                    priceHistory: detail.priceHistory || [],
+                    startingPrice: detail.startingPrice || 25000,
+                    negotiations: detail.negotiations || []
+                  };
+                  
+                  if (id && negotiationData.id === id) {
+                    setIsCompleted(isCompletedStatus);
+                  }
+                  
+                  return negotiationData;
+                }
+                return null;
+              } catch (error) {
+                console.error(`Error fetching details for ${group.id}:`, error);
+                return null;
+              }
+            })
+          );
+          
+          setNegotiations(detailedNegotiations.filter(n => n !== null));
         }
-        const data = await response.json();
-        
-        const negotiationDetail: NegotiationDetail = {
-          id: data.id || id,
-          title: data.title || "Negotiation",
-          productName: data.productName || "",
-          best_nap: data.startingPrice || 0,
-          savings_percent: 0,
-          status: data.status === "running" ? "IN_PROGRESS" : data.status || "IN_PROGRESS",
-          vendors_engaged: data.vendors_engaged || 0,
-          created_at: new Date().toISOString(),
-          startingPrice: data.startingPrice || 25000,
-          targetReduction: data.targetReduction || 0,
-          targetPrice: data.targetPrice || 0,
-          vendors: data.vendors || [],
-          priceHistory: data.priceHistory && data.priceHistory.length > 0 ? data.priceHistory : [{ round: 1 }],
-          suggestions: data.suggestions || [],
-          messages: data.messages || [],
-          agentRationale: data.agentRationale || "Negotiation in progress...",
-          riskScore: data.riskScore || 5,
-          startTime: new Date().toISOString(),
-        };
-        
-        if (isMounted) {
-          setNegotiation(negotiationDetail);
-          setOffers(data.offers || []);
-          setNegotiations(data.negotiations || []);
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching negotiation group:", error);
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        console.error("Error fetching negotiations:", error);
+        setIsLoading(false);
       }
     }
-    
-    fetchNegotiationGroup();
-    intervalId = setInterval(fetchNegotiationGroup, 3000);
 
-    return () => {
-      isMounted = false;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
+    fetchNegotiations();
+    const interval = setInterval(fetchNegotiations, 5000); // Update every 5 seconds
+
+    return () => clearInterval(interval);
   }, [id]);
 
-  // Calculate betting options with odds based on REAL offers data
+  // Calculate betting options based on most recent prices
   useEffect(() => {
-    if (!negotiation || !negotiation.vendors || negotiation.vendors.length === 0) return;
-    if (!offers || !negotiations) return;
+    if (negotiations.length === 0) {
+      setBettingOptions([]);
+      return;
+    }
 
-    const startingPrice = negotiation.startingPrice;
+    const options: BettingOption[] = [];
 
-    // Create a map of negotiation_id -> vendor_id
-    const negotiationToVendor = new Map<number, number>();
-    negotiations.forEach((neg) => {
-      negotiationToVendor.set(neg.id, neg.vendor_id);
-    });
+    negotiations.forEach((negotiation) => {
+      if (!negotiation.vendors || negotiation.vendors.length === 0) return;
 
-    // Group offers by negotiation_id and find best (lowest) price for each agent
-    const agentOffers = new Map<number, Offer[]>();
-    offers.forEach((offer) => {
-      if (!agentOffers.has(offer.negotiation_id)) {
-        agentOffers.set(offer.negotiation_id, []);
-      }
-      agentOffers.get(offer.negotiation_id)!.push(offer);
-    });
+      // Get most recent price from price history
+      const latestRound = negotiation.priceHistory?.[negotiation.priceHistory.length - 1];
+      const startingPrice = negotiation.startingPrice || 25000;
 
-    // Calculate agent performance data
-    const agentData = negotiation.vendors.map((vendor) => {
-      // Find negotiation for this vendor
-      const negotiationForVendor = negotiations.find(
-        (neg) => Number(neg.vendor_id) === Number(vendor.id)
-      );
-
-      if (!negotiationForVendor) {
-        return null;
+      // Create mapping of vendor_id to negotiation_id (agent_id)
+      const vendorToAgent = new Map<string, string>();
+      if (negotiation.negotiations) {
+        negotiation.negotiations.forEach((neg: any) => {
+          vendorToAgent.set(String(neg.vendor_id), String(neg.id));
+        });
       }
 
-      const negotiationId = negotiationForVendor.id;
-      const vendorOffers = agentOffers.get(negotiationId) || [];
-      
-      // Get best (lowest) offer price
-      const bestOffer = vendorOffers.length > 0
-        ? Math.min(...vendorOffers.map((o) => o.price))
-        : null;
+      negotiation.vendors.forEach((vendor) => {
+        // Get agent ID (negotiation_id) for this vendor
+        const agentId = vendorToAgent.get(vendor.id) || `agent-${vendor.id}`;
+        
+        // Get current price for this vendor from latest round
+        const currentPrice = latestRound?.[vendor.id] as number | undefined;
+        const price = currentPrice || null;
 
-      // Calculate actual reduction based on best offer
-      const currentPrice = bestOffer || startingPrice;
-      const reduction = bestOffer
-        ? ((startingPrice - bestOffer) / startingPrice) * 100
-        : 0;
+        // Calculate reduction
+        const reduction = price 
+          ? ((startingPrice - price) / startingPrice) * 100 
+          : 0;
 
-      // Count agent messages (negotiation attempts)
-      const agentMessages = negotiation.messages?.filter(
-        (m: any) =>
-          m.vendor_id &&
-          String(m.vendor_id) === String(vendor.id) &&
-          m.sender === "agent"
-      ) || [];
-
-      // Determine status based on actual performance
-      let status: "Strong" | "Moderate" | "Struggling" | "No Offers" = "No Offers";
-      if (bestOffer) {
-        if (reduction > 15) status = "Strong";
-        else if (reduction > 5) status = "Moderate";
-        else status = "Struggling";
-      }
-
-      return {
-        vendor,
-        negotiationId,
-        agentId: negotiationId.toString(),
-        currentPrice: bestOffer,
-        reduction,
-        odds: 0, // Will be calculated below
-        potentialReturn: 0,
-        winProbability: 0, // Will be calculated below
-        performance: {
-          attempts: agentMessages.length,
-          messageCount: agentMessages.length,
-          status,
-          bestOffer,
-        },
-      };
-    }).filter((data): data is BettingOption => data !== null);
-
-    // Sort by reduction (highest reduction = best performance)
-    const sortedAgents = [...agentData].sort((a, b) => {
-      // Agents with offers come first, sorted by reduction
-      if (a.currentPrice && b.currentPrice) {
-        return b.reduction - a.reduction;
-      }
-      if (a.currentPrice) return -1;
-      if (b.currentPrice) return 1;
-      return 0;
-    });
-
-    // Calculate win probabilities based on ACTUAL price reductions
-    // Only consider agents with offers
-    const agentsWithOffers = sortedAgents.filter((a) => a.currentPrice !== null);
-    
-    if (agentsWithOffers.length > 0) {
-      // Use actual reductions to calculate probabilities
-      // Higher reduction = higher probability of winning
-      const totalReduction = agentsWithOffers.reduce(
-        (sum, a) => sum + Math.max(a.reduction, 0.1),
-        0
-      );
-      
-      const probabilities = agentsWithOffers.map((a) =>
-        Math.max(a.reduction, 0.1) / totalReduction
-      );
-
-      // Calculate decimal odds (inverse of probability, with house edge)
-      const houseEdge = 0.1; // 10% house edge
-      const odds = probabilities.map((prob) => (1 / prob) * (1 - houseEdge));
-
-      // Update agents with calculated odds and probabilities
-      agentsWithOffers.forEach((agent, index) => {
-        agent.odds = odds[index];
-        agent.winProbability = probabilities[index] * 100;
+        options.push({
+          negotiationId: negotiation.id,
+          negotiationTitle: negotiation.title || negotiation.productName || "Negotiation",
+          agentId,
+          vendor,
+          currentPrice: price || null,
+          reduction,
+          odds: 0, // Will calculate below
+          potentialReturn: 0,
+          winProbability: 0,
+          startingPrice
+        });
       });
+    });
 
-      // Agents without offers get default low odds
-      sortedAgents.forEach((agent) => {
-        if (agent.currentPrice === null) {
-          agent.odds = 10.0; // High odds (low probability)
-          agent.winProbability = 5.0; // Low probability
+    // Calculate odds based on current prices (lowest price = favorite)
+    if (options.length > 0) {
+      // Group by negotiation
+      const byNegotiation = new Map<string, BettingOption[]>();
+      options.forEach(opt => {
+        if (!byNegotiation.has(opt.negotiationId)) {
+          byNegotiation.set(opt.negotiationId, []);
         }
+        byNegotiation.get(opt.negotiationId)!.push(opt);
       });
-    } else {
-      // No offers yet - give equal probability to all
-      sortedAgents.forEach((agent) => {
-        agent.odds = sortedAgents.length * 1.1; // Equal odds with house edge
-        agent.winProbability = 100 / sortedAgents.length;
+
+      // Calculate odds for each negotiation group
+      byNegotiation.forEach((groupOptions) => {
+        const withPrices = groupOptions.filter(o => o.currentPrice !== null);
+        
+        if (withPrices.length > 0) {
+          // Sort by price (lowest = best)
+          withPrices.sort((a, b) => (a.currentPrice || 0) - (b.currentPrice || 0));
+          
+          // Calculate probabilities based on price (lower price = higher probability)
+          const prices = withPrices.map(o => o.currentPrice!);
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          const range = maxPrice - minPrice || 1;
+
+          withPrices.forEach((opt, index) => {
+            // Inverse probability: lower price = higher probability
+            const priceScore = 1 - ((opt.currentPrice! - minPrice) / range) * 0.7;
+            opt.winProbability = (priceScore / withPrices.reduce((sum, o) => {
+              const oScore = 1 - ((o.currentPrice! - minPrice) / range) * 0.7;
+              return sum + oScore;
+            }, 0)) * 100;
+
+            // Calculate odds with house edge
+            const houseEdge = 0.15; // 15% house edge
+            opt.odds = (100 / opt.winProbability) * (1 - houseEdge);
+          });
+
+          // Options without prices get low probability
+          groupOptions.forEach(opt => {
+            if (opt.currentPrice === null) {
+              opt.winProbability = 5;
+              opt.odds = 15.0;
+            }
+          });
+        } else {
+          // No prices yet - equal odds
+          groupOptions.forEach(opt => {
+            opt.winProbability = 100 / groupOptions.length;
+            opt.odds = groupOptions.length * 1.15;
+          });
+        }
       });
     }
 
-    setBettingOptions(sortedAgents);
-  }, [negotiation, offers, negotiations]);
+    setBettingOptions(options);
+  }, [negotiations]);
 
-  // Calculate potential return when bet amount changes
+  // Calculate potential return
   useEffect(() => {
-    if (!selectedAgentId || !betAmount) {
-      setBettingOptions((prev) =>
-        prev.map((opt) => ({ ...opt, potentialReturn: 0 }))
-      );
+    if (!selectedOption || !betAmount) {
       return;
     }
 
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) return;
 
-    setBettingOptions((prev) =>
-      prev.map((opt) =>
-        opt.agentId === selectedAgentId
-          ? { ...opt, potentialReturn: amount * opt.odds }
-          : opt
-      )
-    );
-  }, [selectedAgentId, betAmount]);
+    setSelectedOption({
+      ...selectedOption,
+      potentialReturn: amount * selectedOption.odds
+    });
+  }, [betAmount, selectedOption?.odds]);
 
   const handlePlaceBet = () => {
-    if (!selectedAgentId || !betAmount) {
+    if (!selectedOption || !betAmount) {
       toast({
-        title: "Please select an agent and enter a bet amount",
+        title: "Please select an option and enter bet amount",
         variant: "destructive",
       });
       return;
@@ -289,297 +337,384 @@ export function Betting() {
       return;
     }
 
-    const option = bettingOptions.find((opt) => opt.agentId === selectedAgentId);
-    if (!option) return;
+    if (amount > spatzencoins) {
+      toast({
+        title: "Insufficient Spatzencoins",
+        description: `You have ${spatzencoins} Spatzencoins but tried to bet ${amount}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Deduct coins
+    setSpatzencoins(prev => prev - amount);
 
     toast({
       title: "Bet Placed! 🤫",
-      description: `You bet ${formatCurrency(amount)} on the agent negotiating with ${option.vendor.company}. Potential return: ${formatCurrency(option.potentialReturn)}`,
-      variant: "default",
+      description: `You bet ${amount} Spatzencoins on Agent #${selectedOption.agentId} (negotiating with ${selectedOption.vendor.company}) in "${selectedOption.negotiationTitle}". Potential return: ${(amount * selectedOption.odds).toFixed(0)} Spatzencoins`,
     });
 
-    // Reset form
-    setSelectedAgentId(null);
+    // Reset
+    setSelectedOption(null);
     setBetAmount("");
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header onNewNegotiation={() => navigate("/new")} />
-        <main className="container px-4 md:px-6 py-8 text-center">
-          <p className="text-lg text-muted-foreground">Loading betting options...</p>
-        </main>
+      <div 
+        className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+        style={{
+          backgroundImage: 'url(/background.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="flex items-center justify-center min-h-screen">
+          <p className="text-white text-lg">Loading betting platform...</p>
+        </div>
       </div>
     );
   }
-
-  if (!negotiation) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header onNewNegotiation={() => navigate("/new")} />
-        <main className="container px-4 md:px-6 py-8 text-center">
-          <p className="text-lg text-muted-foreground">Negotiation not found</p>
-          <Button asChild className="mt-4">
-            <Link to="/">Back to Dashboard</Link>
-          </Button>
-        </main>
-      </div>
-    );
-  }
-
-  const selectedOption = selectedAgentId
-    ? bettingOptions.find((opt) => opt.agentId === selectedAgentId)
-    : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header onNewNegotiation={() => navigate("/new")} />
-
-      <main className="container px-4 md:px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button asChild variant="ghost" size="sm">
-            <Link to={`/negotiation/${id}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Race
-            </Link>
-          </Button>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            🤫 Secret Betting Pool
-          </h1>
-          <p className="text-muted-foreground">
-            Bet on which <strong>agent</strong> will achieve the highest price reduction
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {negotiation.title} • {negotiation.productName} • Starting Price: {formatCurrency(negotiation.startingPrice)}
-          </p>
-        </div>
-
-        {/* Betting Options Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {bettingOptions.map((option, index) => {
-            const isSelected = selectedAgentId === option.agentId;
-            const isLeading = index === 0 && option.currentPrice !== null;
-
-            return (
-              <Card
-                key={option.vendor.id}
-                className={cn(
-                  "cursor-pointer transition-all hover:border-primary",
-                  isSelected && "ring-2 ring-primary border-primary",
-                  isLeading && "border-success/50 bg-success/5"
-                )}
-                onClick={() => setSelectedAgentId(option.agentId)}
+    <div 
+      className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{
+        backgroundImage: 'url(/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Blur overlay when completed */}
+      {isCompleted && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-40 flex items-center justify-center">
+          <Card className="bg-stone-900/95 backdrop-blur-xl border-amber-300/50 shadow-2xl max-w-md mx-4 z-50">
+            <CardHeader>
+              <CardTitle className="text-white text-2xl text-center">⚠️ Bets Closed</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-white/90 text-center">
+                Bets on this negotiation are closed as it's already completed.
+              </p>
+              <div className="p-4 bg-rose-500/20 border border-rose-500/50 rounded-lg">
+                <p className="text-white/90 text-sm">
+                  <span className="font-semibold text-rose-300">Disclaimer:</span> That one coworker you really don't like got <span className="font-bold text-rose-300">5,675€</span> out of it.
+                </p>
+              </div>
+              <Button
+                onClick={() => navigate(id ? `/negotiation/${id}` : "/")}
+                className="w-full bg-amber-300/20 hover:bg-amber-300/30 text-amber-300 border-amber-300/50"
               >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {isLeading && <Trophy className="h-5 w-5 text-warning" />}
-                      <div>
-                        <CardTitle className="text-lg">Agent #{option.agentId}</CardTitle>
-                        <p className="text-xs text-muted-foreground">{option.vendor.company}</p>
-                      </div>
-                    </div>
-                    <div
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: option.vendor.color }}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Current Best Offer */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {option.currentPrice ? "Best Offer Price" : "No Offers Yet"}
-                      </p>
-                      {option.currentPrice ? (
-                        <p className="text-2xl font-bold text-success">
-                          {formatCurrency(option.currentPrice)}
-                        </p>
-                      ) : (
-                        <p className="text-lg font-semibold text-muted-foreground">
-                          Negotiating...
-                        </p>
-                      )}
-                    </div>
+                Go Back
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      {/* Top bar */}
+      <div className="w-full px-4 md:px-6 pt-6 relative z-10 flex items-center justify-between">
+        <Button asChild variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-stone-900/50">
+          <Link to={id ? `/negotiation/${id}` : "/"}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Link>
+        </Button>
+        
+        <Link to="/" className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
+          <SpatzIcon size={36} />
+          <span className="text-xl font-semibold text-white">
+            ask<span className="text-gray-900">Spatz</span>
+          </span>
+        </Link>
 
-                    {/* Reduction */}
-                    {option.currentPrice && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Price Reduction</p>
-                        <div className="flex items-center gap-2">
-                          <TrendingDown className="h-4 w-4 text-success" />
-                          <p className="text-lg font-semibold">
-                            {option.reduction.toFixed(1)}%
-                          </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Saved: {formatCurrency(negotiation.startingPrice - option.currentPrice)}
-                        </p>
-                      </div>
-                    )}
+        {/* Spatzencoins display */}
+        <div className="flex items-center gap-2 px-4 py-2 bg-stone-900/80 backdrop-blur-md border border-stone-700/50 rounded-lg">
+          <Coins className="h-5 w-5 text-amber-400" />
+          <span className="text-white font-semibold">{spatzencoins.toLocaleString()}</span>
+          <span className="text-amber-400 text-sm">Spatzencoins</span>
+        </div>
+      </div>
 
-                    {/* Odds */}
-                    <div className="p-3 bg-muted rounded-lg">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs text-muted-foreground">Odds</span>
-                        <span className="text-sm font-semibold">
-                          {option.odds.toFixed(2)}x
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">Win Probability</span>
-                        <span className="text-sm font-semibold">
-                          {option.winProbability.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
+      <main className={`w-full px-4 md:px-6 py-8 relative z-10 max-w-7xl mx-auto ${isCompleted ? 'pointer-events-none' : ''}`}>
+        {/* Disclaimer for completed negotiations */}
+        {isCompleted && (
+          <Card className="bg-rose-500/20 backdrop-blur-md border-rose-500/50 shadow-lg mb-6">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div className="flex-1">
+                  <p className="text-white font-semibold mb-2">Bets on this negotiation are closed as it's already completed.</p>
+                  <p className="text-white/90 text-sm">
+                    <span className="font-semibold text-rose-300">Disclaimer:</span> That one coworker you really don't like got <span className="font-bold text-rose-300">5,675€</span> out of it.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold text-white mb-2">🤫 Secret Betting Platform</h1>
+          <p className="text-white/70">Bet on which agent will get the lowest price</p>
+        </div>
 
-                    {/* Performance Stats */}
-                    <div className="pt-3 border-t">
-                      <div className="flex items-center gap-2 mb-2">
-                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-semibold text-muted-foreground">
-                          Performance
-                        </span>
-                      </div>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Status:</span>
-                          <span
-                            className={cn(
-                              "font-semibold",
-                              option.performance.status === "Strong" && "text-success",
-                              option.performance.status === "Moderate" && "text-warning",
-                              option.performance.status === "Struggling" && "text-destructive"
-                            )}
-                          >
-                            {option.performance.status}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Messages:</span>
-                          <span className="font-semibold">{option.performance.messageCount}</span>
-                        </div>
-                        {option.performance.bestOffer && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Best Offer:</span>
-                            <span className="font-semibold text-success">
-                              {formatCurrency(option.performance.bestOffer)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-stone-800 mb-6 w-full justify-start">
+            <TabsTrigger value="betting" className="text-white/70 data-[state=active]:bg-stone-700 data-[state=active]:text-white">
+              Place Bets
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-white/70 data-[state=active]:bg-stone-700 data-[state=active]:text-white">
+              Vendor History
+            </TabsTrigger>
+          </TabsList>
 
-                    {/* Potential Return (if selected) */}
-                    {isSelected && selectedOption && parseFloat(betAmount) > 0 && (
-                      <div className="pt-3 border-t">
-                        <div className="flex items-center gap-2 mb-1">
-                          <DollarSign className="h-4 w-4 text-success" />
-                          <span className="text-xs font-semibold text-success">
-                            Potential Return
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold text-success">
-                          {formatCurrency(selectedOption.potentialReturn)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+          <TabsContent value="betting" className="mt-0">
+            {bettingOptions.length === 0 ? (
+              <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
+                <CardContent className="py-12 text-center">
+                  <p className="text-white/70 text-lg">No active negotiations to bet on</p>
+                  <p className="text-white/50 text-sm mt-2">Start a negotiation to see betting options</p>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            ) : (
+              <>
+                {/* Betting Options Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                  {bettingOptions.map((option) => {
+                    const isSelected = selectedOption?.negotiationId === option.negotiationId && 
+                                      selectedOption?.agentId === option.agentId;
+                    const isLowest = option.currentPrice && bettingOptions
+                      .filter(o => o.negotiationId === option.negotiationId && o.currentPrice)
+                      .every(o => !o.currentPrice || o.currentPrice >= option.currentPrice!);
 
-        {/* Betting Form */}
-        <Card className="sticky bottom-4 z-10">
-          <CardHeader>
-            <CardTitle>Place Your Bet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {selectedOption && (
-                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                  <p className="text-sm text-muted-foreground mb-1">Selected Agent</p>
-                  <p className="text-lg font-semibold">Agent #{selectedOption.agentId}</p>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Negotiating with {selectedOption.vendor.company}
-                  </p>
-                  {selectedOption.currentPrice && (
-                    <p className="text-sm mb-2">
-                      Current Best Offer: <span className="font-semibold text-success">
-                        {formatCurrency(selectedOption.currentPrice)}
-                      </span>
-                      <span className="text-muted-foreground ml-2">
-                        ({selectedOption.reduction.toFixed(1)}% reduction)
-                      </span>
-                    </p>
-                  )}
-                  <div className="flex gap-4 mt-2 text-sm">
-                    <span className="text-muted-foreground">
-                      Odds: <span className="font-semibold">{selectedOption.odds.toFixed(2)}x</span>
-                    </span>
-                    <span className="text-muted-foreground">
-                      Win Chance: <span className="font-semibold">{selectedOption.winProbability.toFixed(1)}%</span>
-                    </span>
-                  </div>
+                    return (
+                      <Card
+                        key={`${option.negotiationId}-${option.vendor.id}`}
+                        className={cn(
+                          "bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg cursor-pointer transition-all hover:border-amber-300/50",
+                          isSelected && "ring-2 ring-amber-300 border-amber-300",
+                          isLowest && "border-emerald-300/50"
+                        )}
+                        onClick={() => setSelectedOption(option)}
+                      >
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle className="text-white text-lg">Agent #{option.agentId}</CardTitle>
+                              <p className="text-xs text-white/60 mt-1">Negotiating with {option.vendor.company}</p>
+                              <p className="text-xs text-white/50 mt-0.5">{option.negotiationTitle}</p>
+                            </div>
+                            {isLowest && <Trophy className="h-5 w-5 text-emerald-300" />}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {/* Current Price */}
+                            <div>
+                              <p className="text-xs text-white/70 mb-1">
+                                {option.currentPrice ? "Current Best Price" : "No offers yet"}
+                              </p>
+                              {option.currentPrice ? (
+                                <p className="text-2xl font-bold text-emerald-300">
+                                  {formatCurrency(option.currentPrice)}
+                                </p>
+                              ) : (
+                                <p className="text-lg font-semibold text-white/60">Negotiating...</p>
+                              )}
+                            </div>
+
+                            {/* Reduction */}
+                            {option.currentPrice && (
+                              <div>
+                                <p className="text-xs text-white/70 mb-1">Price Reduction</p>
+                                <div className="flex items-center gap-2">
+                                  <TrendingDown className="h-4 w-4 text-emerald-300" />
+                                  <p className="text-lg font-semibold text-emerald-300">
+                                    {option.reduction.toFixed(1)}%
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Odds */}
+                            <div className="p-3 bg-stone-800/50 rounded-lg">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-white/70">Odds</span>
+                                <span className="text-sm font-semibold text-white">
+                                  {option.odds.toFixed(2)}x
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-white/70">Win Probability</span>
+                                <span className="text-sm font-semibold text-emerald-300">
+                                  {option.winProbability.toFixed(1)}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="betAmount">Bet Amount</Label>
-                <Input
-                  id="betAmount"
-                  type="number"
-                  placeholder="Enter amount"
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(e.target.value)}
-                  min="1"
-                  step="1"
-                />
+                {/* Betting Form */}
+                {selectedOption && (
+                  <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg sticky bottom-4">
+                    <CardHeader>
+                      <CardTitle className="text-white">Place Your Bet</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="p-4 bg-stone-800/50 rounded-lg border border-amber-300/20">
+                          <p className="text-sm text-white/70 mb-1">Selected Agent</p>
+                          <p className="text-lg font-semibold text-white">Agent #{selectedOption.agentId}</p>
+                          <p className="text-xs text-white/60 mt-1">Negotiating with {selectedOption.vendor.company}</p>
+                          <p className="text-xs text-white/50 mt-0.5">{selectedOption.negotiationTitle}</p>
+                          {selectedOption.currentPrice && (
+                            <p className="text-sm text-white/80 mt-2">
+                              Current Price: <span className="font-semibold text-emerald-300">
+                                {formatCurrency(selectedOption.currentPrice)}
+                              </span>
+                            </p>
+                          )}
+                          <div className="flex gap-4 mt-2 text-sm">
+                            <span className="text-white/70">
+                              Odds: <span className="font-semibold text-white">{selectedOption.odds.toFixed(2)}x</span>
+                            </span>
+                            <span className="text-white/70">
+                              Win Chance: <span className="font-semibold text-emerald-300">{selectedOption.winProbability.toFixed(1)}%</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="betAmount" className="text-white">Bet Amount (Spatzencoins)</Label>
+                          <Input
+                            id="betAmount"
+                            type="number"
+                            placeholder="Enter amount"
+                            value={betAmount}
+                            onChange={(e) => setBetAmount(e.target.value)}
+                            min="1"
+                            step="1"
+                            className="bg-stone-800 border-stone-700 text-white"
+                          />
+                        </div>
+
+                        {parseFloat(betAmount) > 0 && (
+                          <div className="p-4 bg-stone-800/50 rounded-lg">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-white/70">Your Bet:</span>
+                              <span className="font-semibold text-white">{parseFloat(betAmount).toLocaleString()} Spatzencoins</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-white/70">Potential Return:</span>
+                              <span className="text-lg font-bold text-emerald-300">
+                                {(parseFloat(betAmount) * selectedOption.odds).toFixed(0)} Spatzencoins
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-stone-700">
+                              <span className="text-sm text-white/70">Profit:</span>
+                              <span className="font-semibold text-emerald-300">
+                                {((parseFloat(betAmount) * selectedOption.odds) - parseFloat(betAmount)).toFixed(0)} Spatzencoins
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button
+                          onClick={handlePlaceBet}
+                          className="w-full bg-amber-300/20 hover:bg-amber-300/30 text-amber-300 border-amber-300/50"
+                          disabled={!selectedOption || !betAmount || parseFloat(betAmount) <= 0 || parseFloat(betAmount) > spatzencoins}
+                          size="lg"
+                        >
+                          Place Bet 🤫
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-0">
+            {negotiations.length > 0 && negotiations[0].vendors.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {negotiations[0].vendors.map((vendor) => {
+                  const history = vendorCharacteristics[vendor.id] || {
+                    vendorId: vendor.id,
+                    company: vendor.company,
+                    totalNegotiations: 0,
+                    averageReduction: 0,
+                    winRate: 0,
+                    characteristics: ["No history available"],
+                    knownFor: "No historical data available for this vendor"
+                  };
+                  
+                  return (
+                    <Card key={vendor.id} className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
+                      <CardHeader>
+                        <CardTitle className="text-white flex items-center gap-2">
+                          <History className="h-5 w-5 text-amber-300" />
+                          {vendor.company}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs text-white/70 mb-1">Known For</p>
+                            <p className="text-sm text-white/90">{history.knownFor}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-xs text-white/70">Total Negotiations</p>
+                              <p className="text-lg font-semibold text-white">{history.totalNegotiations}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-white/70">Avg. Reduction</p>
+                              <p className="text-lg font-semibold text-emerald-300">{history.averageReduction.toFixed(1)}%</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-white/70">Win Rate</p>
+                              <p className="text-lg font-semibold text-emerald-300">{history.winRate}%</p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-white/70 mb-2 flex items-center gap-1">
+                              <Info className="h-3 w-3" />
+                              Characteristics
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {history.characteristics.map((char, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs px-2 py-1 bg-stone-800/50 border border-stone-700/50 rounded text-white/80"
+                                >
+                                  {char}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
-
-              {selectedOption && parseFloat(betAmount) > 0 && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-muted-foreground">Your Bet:</span>
-                    <span className="font-semibold">{formatCurrency(parseFloat(betAmount))}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Potential Return:</span>
-                    <span className="text-lg font-bold text-success">
-                      {formatCurrency(selectedOption.potentialReturn)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                    <span className="text-sm text-muted-foreground">Profit:</span>
-                    <span className="font-semibold text-success">
-                      {formatCurrency(selectedOption.potentialReturn - parseFloat(betAmount))}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={handlePlaceBet}
-                className="w-full"
-                disabled={!selectedAgentId || !betAmount || parseFloat(betAmount) <= 0}
-                size="lg"
-              >
-                Place Bet on Agent 🤫
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            ) : (
+              <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
+                <CardContent className="py-12 text-center">
+                  <p className="text-white/70">No vendor history available</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
 }
-
