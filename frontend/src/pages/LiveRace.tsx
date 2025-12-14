@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy, Users } from "lucide-react";
+import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
@@ -42,6 +42,9 @@ export function LiveRace() {
   const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
   const [expandedOffers, setExpandedOffers] = useState<Set<number>>(new Set());
+  const [isPriceChartCollapsed, setIsPriceChartCollapsed] = useState(false);
+  const [isTranscriptCollapsed, setIsTranscriptCollapsed] = useState(false);
+  const [isOffersCollapsed, setIsOffersCollapsed] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -417,37 +420,110 @@ export function LiveRace() {
               </div>
             </Card>
 
-            {/* View All Offers button - Small */}
+            {/* View All Offers button - In same row */}
             {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
-              <Button 
+              <Card 
                 onClick={() => setShowOffersPanel(true)}
-                size="sm"
-                className="h-8 gap-1.5 px-2 text-xs bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
+                className="bg-stone-900/80 backdrop-blur-md border-2 border-amber-300/80 shadow-lg px-3 py-2 cursor-pointer hover:bg-stone-900/90 hover:border-amber-300 transition-all"
               >
-                <Trophy className="h-3 w-3" />
-                View Offers
-              </Button>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-amber-400" />
+                  <div>
+                    <p className="text-[10px] text-white/70 leading-tight">View</p>
+                    <p className="text-sm font-semibold text-amber-300 leading-tight">
+                      Offers
+                    </p>
+                  </div>
+                </div>
+              </Card>
             )}
           </div>
 
-          <LiveRaceChart
-            priceHistory={negotiation.priceHistory}
-            vendors={negotiation.vendors}
-            finishedVendorIds={offers.map(o => String(o.vendor_id))}
-          />
-          <CommunicationLog 
-            messages={allMessages}
-            vendors={negotiation.vendors}
-          />
+          {/* Price Comparison - Collapsible */}
+          <div className="relative">
+            {!isPriceChartCollapsed ? (
+              <>
+                <div 
+                  className="absolute top-4 right-4 z-10 cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                  onClick={() => setIsPriceChartCollapsed(!isPriceChartCollapsed)}
+                >
+                  <ChevronUp className="h-4 w-4 text-white/70" />
+                </div>
+                <LiveRaceChart
+                  priceHistory={negotiation.priceHistory}
+                  vendors={negotiation.vendors}
+                  finishedVendorIds={offers.map(o => String(o.vendor_id))}
+                />
+              </>
+            ) : (
+              <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">Price Comparison</CardTitle>
+                    <div 
+                      className="cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                      onClick={() => setIsPriceChartCollapsed(!isPriceChartCollapsed)}
+                    >
+                      <ChevronDown className="h-4 w-4 text-white/70" />
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            )}
+          </div>
 
-          {/* Offers Widget */}
+          {/* Negotiation Transcript - Collapsible */}
+          <div className="relative">
+            {!isTranscriptCollapsed ? (
+              <>
+                <div 
+                  className="absolute top-4 right-4 z-10 cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                  onClick={() => setIsTranscriptCollapsed(!isTranscriptCollapsed)}
+                >
+                  <ChevronUp className="h-4 w-4 text-white/70" />
+                </div>
+                <CommunicationLog 
+                  messages={allMessages}
+                  vendors={negotiation.vendors}
+                />
+              </>
+            ) : (
+              <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">Negotiation Transcript</CardTitle>
+                    <div 
+                      className="cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                      onClick={() => setIsTranscriptCollapsed(!isTranscriptCollapsed)}
+                    >
+                      <ChevronDown className="h-4 w-4 text-white/70" />
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            )}
+          </div>
+
+          {/* Offers Widget - Collapsible */}
           <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <DollarSign className="h-5 w-5 text-emerald-300" />
-                Extracted Offers ({offers.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white">
+                  Extracted Offers ({offers.length})
+                </CardTitle>
+                <div 
+                  className="cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                  onClick={() => setIsOffersCollapsed(!isOffersCollapsed)}
+                >
+                  {isOffersCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-white/70" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-white/70" />
+                  )}
+                </div>
+              </div>
             </CardHeader>
+            {!isOffersCollapsed && (
             <CardContent>
               {offers.length === 0 ? (
                 <p className="text-sm text-white/70 text-center py-4">
@@ -531,6 +607,7 @@ export function LiveRace() {
                 </div>
               )}
             </CardContent>
+            )}
           </Card>
         </div>
 
