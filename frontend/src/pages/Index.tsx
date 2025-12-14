@@ -141,7 +141,7 @@ export function Index() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             vendorIds: ["56", "57", "58"],
-            negotiationName: "Negotiation",
+            negotiationName: "",
             productName: inputValue.trim().substring(0, 50),
             userRequest: inputValue.trim(),
           }),

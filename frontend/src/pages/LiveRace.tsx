@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy, Users } from "lucide-react";
+import { ArrowLeft, MessageCircle, CheckCircle, Hand, DollarSign, Trophy, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SpatzIcon } from "@/components/SpatzIcon";
 import { LiveRaceChart } from "@/components/LiveRaceChart";
@@ -41,6 +41,10 @@ export function LiveRace() {
   const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
   const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [expandedOffers, setExpandedOffers] = useState<Set<number>>(new Set());
+  const [isPriceChartCollapsed, setIsPriceChartCollapsed] = useState(false);
+  const [isTranscriptCollapsed, setIsTranscriptCollapsed] = useState(false);
+  const [isOffersCollapsed, setIsOffersCollapsed] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -303,6 +307,26 @@ export function LiveRace() {
   // Count finished agents (unique vendor_ids in offers)
   const finishedAgentsCount = new Set(offers.map(o => o.vendor_id)).size;
 
+  // Helper function to truncate description to first few words
+  const truncateDescription = (text: string, wordCount: number = 16): string => {
+    const words = text.split(' ');
+    if (words.length <= wordCount) return text;
+    return words.slice(0, wordCount).join(' ');
+  };
+
+  const toggleOfferExpansion = (offerId: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when clicking expand button
+    setExpandedOffers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(offerId)) {
+        newSet.delete(offerId);
+      } else {
+        newSet.add(offerId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div 
       className="min-h-screen w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
@@ -396,37 +420,149 @@ export function LiveRace() {
               </div>
             </Card>
 
-            {/* View All Offers button - Small */}
+            {/* View All Offers button - In same row */}
             {finishedAgentsCount === negotiation.vendors.length && finishedAgentsCount > 0 && (
-              <Button 
-                onClick={() => setShowOffersPanel(true)}
-                size="sm"
-                className="h-8 gap-1.5 px-2 text-xs bg-emerald-300/20 hover:bg-emerald-300/30 text-emerald-300 border-emerald-300/50"
-              >
-                <Trophy className="h-3 w-3" />
-                View Offers
-              </Button>
+              <div className="relative">
+                <Card 
+                  onClick={() => setShowOffersPanel(true)}
+                  className="bg-stone-900/80 backdrop-blur-md border-2 border-amber-300/80 shadow-lg px-3 py-2 cursor-pointer hover:bg-stone-900/90 hover:border-amber-300 transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-400" />
+                    <div>
+                      <p className="text-[10px] text-white/70 leading-tight">View</p>
+                      <p className="text-sm font-semibold text-amber-300 leading-tight">
+                        Offers
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+                {/* Handwritten arrow with "click here ;)" */}
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 text-white pointer-events-none flex flex-col items-center">
+                  <svg 
+                    width="50" 
+                    height="30" 
+                    viewBox="0 0 50 30" 
+                    className="transform rotate-180"
+                    style={{ filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' }}
+                  >
+                    <path 
+                      d="M 5 15 Q 15 10, 25 15 T 45 15" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      fill="none" 
+                      strokeLinecap="round"
+                      style={{ strokeDasharray: '2,2' }}
+                    />
+                    <path 
+                      d="M 40 10 L 45 15 L 40 20" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      fill="none" 
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <p 
+                    className="text-[9px] text-white font-handwriting whitespace-nowrap mt-1"
+                    style={{ 
+                      fontFamily: 'cursive',
+                      transform: 'rotate(-2deg)',
+                      textShadow: '0 0 2px rgba(255, 255, 255, 0.5)'
+                    }}
+                  >
+                    click here ;)
+                  </p>
+                </div>
+              </div>
             )}
           </div>
 
-          <LiveRaceChart
-            priceHistory={negotiation.priceHistory}
-            vendors={negotiation.vendors}
-            finishedVendorIds={offers.map(o => String(o.vendor_id))}
-          />
-          <CommunicationLog 
-            messages={allMessages}
-            vendors={negotiation.vendors}
-          />
+          {/* Price Comparison - Collapsible */}
+          <div className="relative">
+            {!isPriceChartCollapsed ? (
+              <>
+                <div 
+                  className="absolute top-4 right-4 z-10 cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                  onClick={() => setIsPriceChartCollapsed(!isPriceChartCollapsed)}
+                >
+                  <ChevronUp className="h-4 w-4 text-white/70" />
+                </div>
+                <LiveRaceChart
+                  priceHistory={negotiation.priceHistory}
+                  vendors={negotiation.vendors}
+                  finishedVendorIds={offers.map(o => String(o.vendor_id))}
+                />
+              </>
+            ) : (
+              <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">Price Comparison</CardTitle>
+                    <div 
+                      className="cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                      onClick={() => setIsPriceChartCollapsed(!isPriceChartCollapsed)}
+                    >
+                      <ChevronDown className="h-4 w-4 text-white/70" />
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            )}
+          </div>
 
-          {/* Offers Widget */}
+          {/* Negotiation Transcript - Collapsible */}
+          <div className="relative">
+            {!isTranscriptCollapsed ? (
+              <>
+                <div 
+                  className="absolute top-4 right-4 z-10 cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                  onClick={() => setIsTranscriptCollapsed(!isTranscriptCollapsed)}
+                >
+                  <ChevronUp className="h-4 w-4 text-white/70" />
+                </div>
+                <CommunicationLog 
+                  messages={allMessages}
+                  vendors={negotiation.vendors}
+                />
+              </>
+            ) : (
+              <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white">Negotiation Transcript</CardTitle>
+                    <div 
+                      className="cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                      onClick={() => setIsTranscriptCollapsed(!isTranscriptCollapsed)}
+                    >
+                      <ChevronDown className="h-4 w-4 text-white/70" />
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            )}
+          </div>
+
+          {/* Offers Widget - Collapsible */}
           <Card className="bg-stone-900/80 backdrop-blur-md border-stone-700/50 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <DollarSign className="h-5 w-5 text-emerald-300" />
-                Extracted Offers ({offers.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white">
+                  Extracted Offers ({offers.length})
+                </CardTitle>
+                <div 
+                  className="cursor-pointer p-2 rounded-full bg-stone-800/80 hover:bg-stone-700/80 transition-colors"
+                  onClick={() => setIsOffersCollapsed(!isOffersCollapsed)}
+                >
+                  {isOffersCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-white/70" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-white/70" />
+                  )}
+                </div>
+              </div>
             </CardHeader>
+            {!isOffersCollapsed && (
             <CardContent>
               {offers.length === 0 ? (
                 <p className="text-sm text-white/70 text-center py-4">
@@ -444,7 +580,31 @@ export function LiveRace() {
                           <p className="text-sm font-medium text-white/70 mb-1">
                             {offer.vendor_name}
                           </p>
-                          <p className="text-sm break-words text-white/70">{offer.description}</p>
+                          <div className="text-sm break-words text-white/70">
+                            {expandedOffers.has(offer.id) ? (
+                              <>
+                                {offer.description}
+                                <button
+                                  onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                  className="ml-1 text-white/60 hover:text-white/80 underline"
+                                >
+                                  ... show less
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {truncateDescription(offer.description)}
+                                {offer.description.split(' ').length > 16 && (
+                                  <button
+                                    onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                    className="ml-1 text-white/60 hover:text-white/80 underline"
+                                  >
+                                    ...
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
                           {/* Pros and Cons */}
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
@@ -486,6 +646,7 @@ export function LiveRace() {
                 </div>
               )}
             </CardContent>
+            )}
           </Card>
         </div>
 
@@ -548,7 +709,7 @@ export function LiveRace() {
 
         {/* Offers Panel (Slide-out from right) */}
         <Sheet open={showOffersPanel} onOpenChange={setShowOffersPanel}>
-          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto bg-stone-900 border-stone-700">
+          <SheetContent className="w-[800px] sm:w-[900px] overflow-y-auto bg-stone-900 border-stone-700">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2 text-white">
                 <Trophy className="h-5 w-5 text-emerald-300" />
@@ -588,7 +749,7 @@ export function LiveRace() {
                           hasUserSelectedOffer.current = true; // Mark that user has manually selected
                         }
                       }}
-                      className={`p-4 border rounded-lg transition-all ${
+                      className={`p-4 border rounded-lg transition-all relative ${
                         isAccepted
                           ? "bg-emerald-300/20 border-emerald-300 ring-2 ring-emerald-300/50 shadow-lg cursor-default"
                           : isSelected
@@ -597,17 +758,30 @@ export function LiveRace() {
                           ? "bg-stone-800/50 cursor-pointer hover:bg-stone-800/70 border-stone-700"
                           : "bg-stone-800/50 cursor-default border-stone-700"
                       }`}
-                    >
-                      {isAccepted && (
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-emerald-300/30">
-                          <CheckCircle className="h-5 w-5 text-emerald-300" />
-                          <span className="text-sm font-semibold text-emerald-300">Accepted Offer</span>
+                      >
+                      {label ? (
+                        <div className={`flex items-center gap-2 mb-3 pb-2 border-b ${
+                          isBestValue 
+                            ? "border-sky-300/30"
+                            : isAccepted
+                            ? "border-emerald-300/30"
+                            : "border-stone-600/30"
+                        }`}>
+                          {isBestValue && <Trophy className="h-5 w-5 text-sky-300" />}
+                          {isAccepted && <CheckCircle className="h-5 w-5 text-emerald-300" />}
+                          <span className={`text-sm font-semibold ${
+                            isBestValue 
+                              ? "text-sky-300"
+                              : isAccepted
+                              ? "text-emerald-300"
+                              : "text-white/70"
+                          }`}>
+                            {label}
+                          </span>
                         </div>
-                      )}
-                      {!isAccepted && isBestValue && (
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-sky-300/30">
-                          <Trophy className="h-5 w-5 text-sky-300" />
-                          <span className="text-sm font-semibold text-sky-300">Recommended Choice</span>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-stone-600/30">
+                          <span className="text-sm font-semibold text-white/70">Alternative</span>
                         </div>
                       )}
                       <div className="flex items-start justify-between gap-4">
@@ -616,19 +790,32 @@ export function LiveRace() {
                             <p className={`text-sm font-medium ${isBestValue ? "text-sky-300" : "text-white"}`}>
                               {offer.vendor_name}
                             </p>
-                            {label && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                isBestValue 
-                                  ? "bg-sky-300/20 text-sky-300 border border-sky-300/50"
-                                  : "bg-stone-700/50 text-white/70 border border-stone-600/50"
-                              }`}>
-                                {label}
-                              </span>
+                          </div>
+                          <div className="text-sm text-white/70 break-words">
+                            {expandedOffers.has(offer.id) ? (
+                              <>
+                                {offer.description}
+                                <button
+                                  onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                  className="ml-1 text-white/60 hover:text-white/80 underline"
+                                >
+                                  ... show less
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {truncateDescription(offer.description)}
+                                {offer.description.split(' ').length > 16 && (
+                                  <button
+                                    onClick={(e) => toggleOfferExpansion(offer.id, e)}
+                                    className="ml-1 text-white/60 hover:text-white/80 underline"
+                                  >
+                                    ...
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
-                          <p className="text-sm text-white/70 break-words">
-                            {offer.description}
-                          </p>
                           {/* Pros and Cons */}
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             {offer.pros && offer.pros.length > 0 && (
