@@ -355,8 +355,16 @@ export function LiveRace() {
           </span>
         </Link>
         
-        {/* Spacer for balance */}
-        <div className="w-20"></div>
+        {/* Betting emoji button - top right, scrolls with page */}
+        {id && (
+          <Link 
+            to={`/betting?id=${id}`}
+            className="text-2xl opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+            title="Betting Platform"
+          >
+            🤫
+          </Link>
+        )}
       </div>
 
       <main className="w-full px-4 md:px-6 py-8 relative z-10">
