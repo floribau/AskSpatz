@@ -206,7 +206,7 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
           </TabsList>
           {vendors.map((vendor) => (
             <TabsContent key={vendor.id} value={vendor.id} className="mt-0">
-              <div className="h-[300px] overflow-y-auto overflow-x-hidden space-y-3 pr-2">
+              <div className="h-[600px] overflow-y-auto overflow-x-hidden space-y-3 pr-2">
                 {messages.filter((m) => m.vendor_id && String(m.vendor_id) === String(vendor.id)).length === 0 ? (
                   <p className="text-center text-white/70 py-8">
                     No messages yet for {vendor.company}
@@ -231,13 +231,6 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
                           )}
                           onClick={() => setExpandedMessage(message)}
                         >
-                          {/* TL;DR Summary */}
-                          <div className="mb-2 pb-2 border-b border-white/10">
-                            <span className="text-xs font-semibold text-amber-300/90">
-                              TL;DR: {tldr}
-                            </span>
-                          </div>
-                          
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                               {message.sender === "agent" && <SpatzIcon size={20} />}
@@ -280,13 +273,6 @@ export function CommunicationLog({ messages, vendors }: CommunicationLogProps) {
                         {new Date(expandedMessage.timestamp).toLocaleString()}
                       </p>
                     </div>
-                  </div>
-                  {/* TL;DR in header */}
-                  <div className="text-right">
-                    <p className="text-xs text-white/60 mb-1">TL;DR</p>
-                    <p className="text-sm font-semibold text-amber-300">
-                      {generateTLDR(expandedMessage.content, false)}
-                    </p>
                   </div>
                 </div>
               </DialogHeader>
