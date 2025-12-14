@@ -1,11 +1,15 @@
+import dotenv from "dotenv";
+// Load environment variables first, before any other imports
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { Agent } from "./agent.js";
 import { supabase } from "./supabase.js";
 import setupVendors from "./setupVendors.js";
 import { initChatModel, HumanMessage, SystemMessage } from "langchain";
 import { sendNegotiationCompleteEmail } from "./email.js";
+import { searchProducts } from "./productSearch.js";
  
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,10 +39,39 @@ const activeNegotiations = new Map<string, { agent: Agent; status: string }>();
 
 // Start negotiation endpoint
 app.post("/api/negotiations/start", async (req, res) => {
-  const { vendorIds, negotiationName, productName, startingPrice, targetReduction, quantity, userRequest } = req.body;
+  let { vendorIds, negotiationName, productName, startingPrice, targetReduction, quantity, userRequest } = req.body;
+
+  // If vendorIds not provided but userRequest is, search products to find matching vendors
+  if ((!vendorIds || vendorIds.length === 0) && userRequest) {
+    console.log(`[API] No vendorIds provided, searching products for: "${userRequest}"`);
+    
+    try {
+      const searchResults = await searchProducts(userRequest, 3);
+      
+      if (searchResults && searchResults.length > 0) {
+        vendorIds = searchResults.map(result => String(result.vendor_id));
+        console.log(`[API] Found ${searchResults.length} matching products:`);
+        searchResults.forEach((result, idx) => {
+          console.log(`  ${idx + 1}. ${result.name.substring(0, 60)}... (Vendor ${result.vendor_id}, similarity: ${result.similarity.toFixed(4)})`);
+        });
+        console.log(`[API] Starting negotiations with vendors: ${vendorIds.join(", ")}`);
+      } else {
+        console.log(`[API] No matching products found, using default vendors`);
+        // Fallback to default vendors if no matches found
+        vendorIds = ["56", "57", "58"];
+      }
+    } catch (error) {
+      console.error("[API] Error searching products:", error);
+      if (error instanceof Error) {
+        console.error("[API] Error details:", error.message, error.stack);
+      }
+      // Fallback to default vendors on error
+      vendorIds = ["56", "57", "58"];
+    }
+  }
 
   if (!vendorIds || !Array.isArray(vendorIds) || vendorIds.length === 0) {
-    return res.status(400).json({ error: "vendorIds array is required" });
+    return res.status(400).json({ error: "vendorIds array is required or userRequest must be provided" });
   }
 
   console.log(`[API] Starting negotiations with vendors: ${vendorIds.join(", ")}`);

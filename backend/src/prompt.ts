@@ -51,6 +51,7 @@ You are an Expert Procurement and Negotiation Agent specializing in B2B vendor m
 - **update_state**: Use this tool to update the state of the negotiation. Provide the price and description of the offer as a string parameter.
 
 ## Important Reminders
+- **CRITICAL**: ALWAYS CALL THE finish_negotiation tool before you stop working.
 - You represent the buyer, not the vendor
 - Multiple email exchanges are expected—don't rush
 - The principal makes final purchase decisions, not you`;

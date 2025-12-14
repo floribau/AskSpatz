@@ -135,12 +135,12 @@ export function Index() {
     if (inputValue.trim() && !isSubmitting) {
       setIsSubmitting(true);
       try {
-        // Call the API to start negotiation with vendors 56, 57, 58, 67
+        // Call the API to start negotiation - backend will search products and find matching vendors
         const response = await fetch("http://localhost:3001/api/negotiations/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            vendorIds: ["56", "57", "58", "67"],
+            // Don't send vendorIds - let backend search products and find matching vendors
             negotiationName: "",
             productName: inputValue.trim().substring(0, 50),
             userRequest: inputValue.trim(),
