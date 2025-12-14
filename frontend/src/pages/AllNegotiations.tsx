@@ -36,6 +36,9 @@ export function AllNegotiations() {
   const completedNegotiations = negotiations.filter(
     (n) => n.status === "COMPLETED"
   );
+  const acceptedNegotiations = negotiations.filter(
+    (n) => n.status === "ACCEPTED"
+  );
 
   return (
     <div 
@@ -81,6 +84,12 @@ export function AllNegotiations() {
                     className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-stone-700"
                   >
                     Completed ({completedNegotiations.length})
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="accepted" 
+                    className="whitespace-nowrap text-sm font-medium px-4 py-2 data-[state=active]:bg-stone-700"
+                  >
+                    Accepted ({acceptedNegotiations.length})
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -132,6 +141,34 @@ export function AllNegotiations() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                     {completedNegotiations.map((negotiation) => (
+                      <NegotiationCard
+                        key={negotiation.id}
+                        negotiation={negotiation}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="accepted" className="space-y-4">
+                {isLoading ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      Loading negotiations...
+                    </p>
+                  </div>
+                ) : acceptedNegotiations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">
+                      No accepted negotiations yet
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Accepted negotiations will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                    {acceptedNegotiations.map((negotiation) => (
                       <NegotiationCard
                         key={negotiation.id}
                         negotiation={negotiation}

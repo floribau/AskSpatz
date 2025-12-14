@@ -15,6 +15,7 @@ export function NegotiationCard({ negotiation }: NegotiationCardProps) {
 
   const isRunning = negotiation.status === "IN_PROGRESS" || negotiation.status === "REVIEW_REQUIRED";
   const isCompleted = negotiation.status === "COMPLETED";
+  const isAccepted = negotiation.status === "ACCEPTED";
 
   return (
     <Link to={`/negotiation/${negotiation.id}`} className="block h-full">
@@ -41,13 +42,17 @@ export function NegotiationCard({ negotiation }: NegotiationCardProps) {
                 isRunning 
                   ? "text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,0.8)]" 
                   : isCompleted 
-                  ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]" 
+                  ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]"
+                  : isAccepted
+                  ? "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]"
                   : "text-white"
               }`}>
                 {isRunning
                   ? "Running"
                   : isCompleted
                   ? "Completed"
+                  : isAccepted
+                  ? "Accepted"
                   : negotiation.status}
               </p>
             </div>
